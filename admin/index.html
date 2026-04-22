@@ -1,77 +1,135 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Admin</title>
-  <style>
-    body { font-family: Arial; }
-    #map { height: 300px; margin: 10px 0; }
-    .card { border:1px solid #ccc; padding:10px; margin:10px; }
-  </style>
+<title>Admin Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<style>
+body {
+  font-family: Arial;
+  margin: 0;
+  background: #f4f6f9;
+}
+
+.header {
+  background: #1e293b;
+  color: white;
+  padding: 12px;
+  font-size: 18px;
+}
+
+.container {
+  padding: 15px;
+}
+
+.card {
+  background: white;
+  border-radius: 10px;
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  background: #1e293b;
+  color: white;
+  padding: 10px;
+}
+
+td {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.map {
+  height: 250px;
+  border-radius: 10px;
+}
+</style>
 </head>
+
 <body>
 
-<h2>Admin Login</h2>
-<input id="pass" type="password">
-<button onclick="login()">Login</button>
+<div class="header">📊 Visitor Dashboard</div>
 
-<div id="dashboard" style="display:none">
-  <h2>Visitors</h2>
-  <div id="map"></div>
-  <div id="list"></div>
+<div class="container">
+
+<div class="card">
+  <h3>Login</h3>
+  <input id="pass" type="password">
+  <button onclick="login()">Login</button>
 </div>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<div class="card">
+  <h3>Visitors</h3>
+  <table id="table">
+    <tr>
+      <th>Time</th>
+      <th>Device</th>
+      <th>Location</th>
+      <th>Map</th>
+    </tr>
+  </table>
+</div>
 
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-let map;
-
 async function login() {
   const pass = document.getElementById("pass").value;
 
   const res = await fetch("/api/login", {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ password: pass })
   });
 
-  const d = await res.json();
-
-  if (d.ok) {
-    document.getElementById("dashboard").style.display = "block";
-    load();
-  } else {
-    alert("Wrong password");
-  }
-}
-
-async function load() {
-  const res = await fetch("/api/events");
   const data = await res.json();
 
-  const list = document.getElementById("list");
+  if (!data.ok) return alert("Wrong password");
 
-  list.innerHTML = "";
-
-  map = L.map('map').setView([20, 77], 4);
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-  data.forEach(d => {
-
-    list.innerHTML += `
-      <div class="card">
-        ${d.ip}<br>
-        ${d.platform}<br>
-        ${d.camera}
-      </div>
-    `;
-
-    if (d.lat) {
-      L.marker([d.lat, d.lng]).addTo(map);
-    }
-  });
+  loadVisitors();
 }
 
-setInterval(load, 5000);
+async function loadVisitors() {
+  const res = await fetch("/api/events");
+  const list = await res.json();
+
+  const table = document.getElementById("table");
+
+  list.reverse().forEach((v, i) => {
+    const row = document.createElement("tr");
+
+    row.innerHTML = `
+      <td>${v.time}</td>
+      <td>${v.device}</td>
+      <td>
+        <a href="https://maps.google.com/?q=${v.lat},${v.lng}" target="_blank">
+          Open Map
+        </a>
+      </td>
+      <td><div id="map${i}" class="map"></div></td>
+    `;
+
+    table.appendChild(row);
+
+    setTimeout(() => {
+      const map = L.map("map"+i).setView([v.lat, v.lng], 10);
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+
+      L.marker([v.lat, v.lng]).addTo(map);
+    }, 100);
+  });
+}
 </script>
 
 </body>
