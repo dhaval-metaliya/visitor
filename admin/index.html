@@ -1,37 +1,44 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Admin Dashboard</title>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visitor Dashboard</title>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
 <style>
 body {
-  font-family: Arial;
   margin: 0;
-  background: #f4f6f9;
+  font-family: 'Segoe UI', sans-serif;
+  background: #f5f7fb;
 }
 
+/* HEADER */
 .header {
   background: #1e293b;
-  color: white;
-  padding: 12px;
-  font-size: 18px;
+  color: #fff;
+  padding: 16px 24px;
+  font-size: 20px;
+  font-weight: 600;
 }
 
-.container {
-  padding: 15px;
-}
-
+/* CARD */
 .card {
-  background: white;
+  background: #fff;
+  margin: 20px;
+  padding: 20px;
   border-radius: 10px;
-  padding: 15px;
-  margin-bottom: 15px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
 
+/* LOGIN */
+.login-box {
+  display: flex;
+  gap: 10px;
+}
+
+/* TABLE */
 table {
   width: 100%;
   border-collapse: collapse;
@@ -39,19 +46,42 @@ table {
 
 th {
   background: #1e293b;
-  color: white;
-  padding: 10px;
+  color: #fff;
+  padding: 12px;
+  text-align: left;
 }
 
 td {
-  padding: 8px;
+  padding: 12px;
   border-bottom: 1px solid #eee;
 }
 
-.map {
-  height: 250px;
-  border-radius: 10px;
+tr:hover {
+  background: #f1f5f9;
 }
+
+/* BADGE */
+.badge {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  background: #e2e8f0;
+}
+
+/* MAP */
+.map {
+  height: 120px;
+  width: 180px;
+  border-radius: 8px;
+}
+
+/* LINK */
+.map-link {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 500;
+}
+
 </style>
 </head>
 
@@ -59,74 +89,83 @@ td {
 
 <div class="header">📊 Visitor Dashboard</div>
 
-<div class="container">
-
 <div class="card">
   <h3>Login</h3>
-  <input id="pass" type="password">
-  <button onclick="login()">Login</button>
+  <div class="login-box">
+    <input type="password" id="pass" placeholder="Enter password">
+    <button onclick="login()">Login</button>
+  </div>
 </div>
 
 <div class="card">
   <h3>Visitors</h3>
-  <table id="table">
-    <tr>
-      <th>Time</th>
-      <th>Device</th>
-      <th>Location</th>
-      <th>Map</th>
-    </tr>
+  <table>
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Device</th>
+        <th>Network</th>
+        <th>Location</th>
+        <th>Map</th>
+      </tr>
+    </thead>
+    <tbody id="data"></tbody>
   </table>
 </div>
 
-</div>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 async function login() {
   const pass = document.getElementById("pass").value;
 
   const res = await fetch("/api/login", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ password: pass })
   });
 
   const data = await res.json();
 
-  if (!data.ok) return alert("Wrong password");
-
-  loadVisitors();
+  if (data.ok) {
+    load();
+  } else {
+    alert("Wrong password");
+  }
 }
 
-async function loadVisitors() {
+async function load() {
   const res = await fetch("/api/events");
   const list = await res.json();
 
-  const table = document.getElementById("table");
+  const tbody = document.getElementById("data");
+  tbody.innerHTML = "";
 
-  list.reverse().forEach((v, i) => {
-    const row = document.createElement("tr");
+  list.forEach((v, i) => {
+    const id = "map" + i;
 
-    row.innerHTML = `
-      <td>${v.time}</td>
-      <td>${v.device}</td>
-      <td>
-        <a href="https://maps.google.com/?q=${v.lat},${v.lng}" target="_blank">
-          Open Map
-        </a>
-      </td>
-      <td><div id="map${i}" class="map"></div></td>
+    tbody.innerHTML += `
+      <tr>
+        <td>${new Date(v.updated).toLocaleString()}</td>
+        <td><span class="badge">${v.device || "-"}</span></td>
+        <td>${v.network || "-"}</td>
+        <td>
+          <a class="map-link" href="https://maps.google.com/?q=${v.lat},${v.lng}" target="_blank">
+            Open Map
+          </a>
+        </td>
+        <td><div id="${id}" class="map"></div></td>
+      </tr>
     `;
 
-    table.appendChild(row);
-
     setTimeout(() => {
-      const map = L.map("map"+i).setView([v.lat, v.lng], 10);
+      if (v.lat && v.lng) {
+        const map = L.map(id).setView([v.lat, v.lng], 10);
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
+          .addTo(map);
 
-      L.marker([v.lat, v.lng]).addTo(map);
+        L.marker([v.lat, v.lng]).addTo(map);
+      }
     }, 100);
   });
 }
