@@ -1,0 +1,6 @@
+name = "visitor-tracker"
+compatibility_date = "2024-01-01"
+
+[[kv_namespaces]]
+binding = "VISITOR_KV"
+id = "41bb463c234248fe8c6914a1aaa93521"
