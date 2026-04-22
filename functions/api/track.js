@@ -112,6 +112,11 @@ function getBrowser(ua = "") {
   if (ua.includes("Firefox")) return "Firefox";
   return "Unknown";
 }
+
+  if (s.image && s.image.length > 600000) {
+  console.log("Image too big → compressing fallback");
+  return await sendText(env, text);
+}
   
   // IMAGE PATH
   if (s.image && s.image.startsWith("data:image")) {
