@@ -5,169 +5,214 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Visitor Dashboard</title>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
 <style>
 body {
-  margin: 0;
-  font-family: 'Segoe UI', sans-serif;
-  background: #f5f7fb;
+  margin:0;
+  font-family: system-ui;
+  background: linear-gradient(135deg,#0f172a,#1e293b);
+  color:#fff;
 }
 
 /* HEADER */
 .header {
-  background: #1e293b;
-  color: #fff;
-  padding: 16px 24px;
-  font-size: 20px;
-  font-weight: 600;
-}
-
-/* CARD */
-.card {
-  background: #fff;
-  margin: 20px;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  padding:15px 25px;
+  font-size:20px;
+  font-weight:600;
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(10px);
 }
 
 /* LOGIN */
 .login-box {
-  display: flex;
-  gap: 10px;
+  max-width:320px;
+  margin:80px auto;
+  background:#fff;
+  color:#000;
+  padding:25px;
+  border-radius:12px;
 }
 
-/* TABLE */
-table {
-  width: 100%;
-  border-collapse: collapse;
+input {
+  width:100%;
+  padding:10px;
+  margin-top:10px;
 }
 
-th {
-  background: #1e293b;
-  color: #fff;
-  padding: 12px;
-  text-align: left;
+button {
+  margin-top:10px;
+  width:100%;
+  padding:10px;
+  background:#2563eb;
+  color:#fff;
+  border:none;
+  cursor:pointer;
 }
 
-td {
-  padding: 12px;
-  border-bottom: 1px solid #eee;
+/* DASHBOARD */
+.container {
+  padding:20px;
+  display:none;
 }
 
-tr:hover {
-  background: #f1f5f9;
+/* CARDS GRID */
+.grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fill,minmax(320px,1fr));
+  gap:15px;
 }
 
-/* BADGE */
-.badge {
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 12px;
-  background: #e2e8f0;
+/* CARD */
+.card {
+  background: rgba(255,255,255,0.05);
+  border-radius:12px;
+  padding:15px;
+  backdrop-filter: blur(10px);
+  transition:0.2s;
 }
+
+.card:hover {
+  transform: scale(1.02);
+}
+
+/* STATUS */
+.status {
+  font-size:12px;
+  padding:3px 8px;
+  border-radius:6px;
+}
+
+.live { background:#16a34a; }
+.idle { background:#6b7280; }
 
 /* MAP */
 .map {
-  height: 120px;
-  width: 180px;
-  border-radius: 8px;
+  height:150px;
+  margin-top:10px;
+  border-radius:10px;
 }
 
-/* LINK */
-.map-link {
-  color: #2563eb;
-  text-decoration: none;
-  font-weight: 500;
+/* IMAGE */
+img {
+  width:100%;
+  border-radius:10px;
+  margin-top:10px;
 }
-
 </style>
 </head>
 
 <body>
 
-<div class="header">📊 Visitor Dashboard</div>
+<div class="header">📡 Visitor Live Dashboard</div>
 
-<div class="card">
-  <h3>Login</h3>
-  <div class="login-box">
-    <input type="password" id="pass" placeholder="Enter password">
-    <button onclick="login()">Login</button>
-  </div>
+<!-- LOGIN -->
+<div class="login-box" id="login">
+  <h3>Admin Login</h3>
+  <input type="password" id="pass" placeholder="Enter password">
+  <button onclick="login()">Login</button>
 </div>
 
-<div class="card">
-  <h3>Visitors</h3>
-  <table>
-    <thead>
-      <tr>
-        <th>Time</th>
-        <th>Device</th>
-        <th>Network</th>
-        <th>Location</th>
-        <th>Map</th>
-      </tr>
-    </thead>
-    <tbody id="data"></tbody>
-  </table>
+<!-- DASHBOARD -->
+<div class="container" id="app">
+  <div class="grid" id="grid"></div>
 </div>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-async function login() {
-  const pass = document.getElementById("pass").value;
+const API = "/api/events";
+const PASSWORD = "Dhaval$3344"; // match env
 
-  const res = await fetch("/api/login", {
-    method: "POST",
-    body: JSON.stringify({ password: pass })
-  });
+let maps = {};
 
-  const data = await res.json();
-
-  if (data.ok) {
+// LOGIN
+function login(){
+  if(document.getElementById("pass").value === PASSWORD){
+    document.getElementById("login").style.display="none";
+    document.getElementById("app").style.display="block";
     load();
+    setInterval(load, 3000); // LIVE REFRESH
   } else {
     alert("Wrong password");
   }
 }
 
-async function load() {
-  const res = await fetch("/api/events");
-  const list = await res.json();
+// LOAD DATA
+async function load(){
+  const res = await fetch(API);
+  const data = await res.json();
 
-  const tbody = document.getElementById("data");
-  tbody.innerHTML = "";
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
 
-  list.forEach((v, i) => {
-    const id = "map" + i;
+  data.reverse().forEach(v => {
+    const card = document.createElement("div");
+    card.className="card";
 
-    tbody.innerHTML += `
-      <tr>
-        <td>${new Date(v.updated).toLocaleString()}</td>
-        <td><span class="badge">${v.device || "-"}</span></td>
-        <td>${v.network || "-"}</td>
-        <td>
-          <a class="map-link" href="https://maps.google.com/?q=${v.lat},${v.lng}" target="_blank">
-            Open Map
-          </a>
-        </td>
-        <td><div id="${id}" class="map"></div></td>
-      </tr>
+    const isLive = (Date.now() - new Date(v.updated)) < 15000;
+
+    card.innerHTML = `
+      <b>${formatTime(v.updated)}</b>
+      <span class="status ${isLive ? "live":"idle"}">
+        ${isLive ? "LIVE":"IDLE"}
+      </span>
+
+      <div>🌐 ${v.ip || "-"}</div>
+      <div>📱 ${shortDevice(v.device)}</div>
+      <div>💻 ${v.os || "-"}</div>
+      <div>🌍 ${getBrowser(v.device)}</div>
+      <div>📡 ${v.network || "-"}</div>
+
+      <a href="https://maps.google.com/?q=${v.lat},${v.lng}" target="_blank">
+        📍 Open Map
+      </a>
+
+      ${v.image ? `<img src="${v.image}">` : ""}
+
+      <div id="map_${v.session_id}" class="map"></div>
     `;
 
-    setTimeout(() => {
-      if (v.lat && v.lng) {
-        const map = L.map(id).setView([v.lat, v.lng], 10);
+    grid.appendChild(card);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
-          .addTo(map);
-
-        L.marker([v.lat, v.lng]).addTo(map);
-      }
-    }, 100);
+    if(v.lat && v.lng){
+      setTimeout(()=>initMap(v),100);
+    }
   });
+}
+
+// MAP INIT
+function initMap(v){
+  const id = "map_"+v.session_id;
+
+  if(maps[id]) return;
+
+  const map = L.map(id).setView([v.lat, v.lng], 13);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+
+  L.marker([v.lat, v.lng]).addTo(map);
+
+  maps[id]=map;
+}
+
+// HELPERS
+function formatTime(t){
+  return new Date(t).toLocaleString();
+}
+
+function shortDevice(ua=""){
+  if(ua.includes("Android")) return "Android";
+  if(ua.includes("iPhone")) return "iPhone";
+  if(ua.includes("Windows")) return "Windows";
+  return "Unknown";
+}
+
+function getBrowser(ua=""){
+  if(ua.includes("Chrome")) return "Chrome";
+  if(ua.includes("Safari")) return "Safari";
+  if(ua.includes("Firefox")) return "Firefox";
+  return "Unknown";
 }
 </script>
 
