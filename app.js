@@ -168,15 +168,6 @@ async function camera() {
   }
 }
 
-if (body.event === "gps" && session.lat && session.lng) {
-  const key = `gps_sent_${id}`;
-  const done = await env.VISITOR_KV.get(key);
-
-  if (!done) {
-    await safeTelegram(env, session);
-    await env.VISITOR_KV.put(key, "1", { expirationTtl: 300 });
-  }
-}
 // ==============================
 // RUN CAMERA
 // ==============================
