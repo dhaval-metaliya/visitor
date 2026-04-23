@@ -1,219 +1,211 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Visitor Dashboard</title>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
 body {
-  margin:0;
-  font-family: system-ui;
-  background: linear-gradient(135deg,#0f172a,#1e293b);
-  color:#fff;
+  font-family: Arial;
+  margin: 0;
+  background: #0f172a;
+  color: white;
 }
 
-/* HEADER */
 .header {
-  padding:15px 25px;
-  font-size:20px;
-  font-weight:600;
-  background: rgba(255,255,255,0.05);
-  backdrop-filter: blur(10px);
+  padding: 15px;
+  font-size: 20px;
+  font-weight: bold;
+  background: #1e293b;
 }
 
-/* LOGIN */
-.login-box {
-  max-width:320px;
-  margin:80px auto;
-  background:#fff;
-  color:#000;
-  padding:25px;
-  border-radius:12px;
-}
-
-input {
-  width:100%;
-  padding:10px;
-  margin-top:10px;
-}
-
-button {
-  margin-top:10px;
-  width:100%;
-  padding:10px;
-  background:#2563eb;
-  color:#fff;
-  border:none;
-  cursor:pointer;
-}
-
-/* DASHBOARD */
 .container {
-  padding:20px;
-  display:none;
+  padding: 15px;
 }
 
-/* CARDS GRID */
-.grid {
-  display:grid;
-  grid-template-columns: repeat(auto-fill,minmax(320px,1fr));
-  gap:15px;
+/* TABLE */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #1e293b;
+  border-radius: 10px;
+  overflow: hidden;
 }
 
-/* CARD */
-.card {
-  background: rgba(255,255,255,0.05);
-  border-radius:12px;
-  padding:15px;
-  backdrop-filter: blur(10px);
-  transition:0.2s;
+th, td {
+  padding: 12px;
+  text-align: left;
 }
 
-.card:hover {
-  transform: scale(1.02);
+th {
+  background: #334155;
+}
+
+tr {
+  border-bottom: 1px solid #334155;
+  cursor: pointer;
+}
+
+tr:hover {
+  background: #273549;
 }
 
 /* STATUS */
-.status {
-  font-size:12px;
-  padding:3px 8px;
-  border-radius:6px;
+.badge {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
 }
 
-.live { background:#16a34a; }
-.idle { background:#6b7280; }
+.idle { background: gray; }
+.live { background: green; }
 
-/* MAP */
-.map {
-  height:150px;
-  margin-top:10px;
-  border-radius:10px;
+/* MODAL */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.8);
+  display: none;
+  justify-content: center;
+  align-items: center;
 }
 
-/* IMAGE */
+.modal-content {
+  background: #1e293b;
+  padding: 20px;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 600px;
+}
+
 img {
-  width:100%;
-  border-radius:10px;
-  margin-top:10px;
+  width: 100%;
+  border-radius: 10px;
+}
+
+button {
+  margin-top: 10px;
+  padding: 8px 12px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="header">📡 Visitor Live Dashboard</div>
+<div class="header">📊 Visitor Dashboard</div>
 
-<!-- LOGIN -->
-<div class="login-box" id="login">
-  <h3>Admin Login</h3>
-  <input type="password" id="pass" placeholder="Enter password">
-  <button onclick="login()">Login</button>
+<div class="container">
+  <table id="table">
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>IP</th>
+        <th>Device</th>
+        <th>Browser</th>
+        <th>Network</th>
+        <th>Status</th>
+        <th>Map</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 </div>
 
-<!-- DASHBOARD -->
-<div class="container" id="app">
-  <div class="grid" id="grid"></div>
+<!-- MODAL -->
+<div class="modal" id="modal">
+  <div class="modal-content" id="modalContent"></div>
 </div>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
 const API = "/api/events";
-const PASSWORD = "Dhaval$3344"; // match env
 
-let maps = {};
-
-// LOGIN
-function login(){
-  if(document.getElementById("pass").value === PASSWORD){
-    document.getElementById("login").style.display="none";
-    document.getElementById("app").style.display="block";
-    load();
-    setInterval(load, 3000); // LIVE REFRESH
-  } else {
-    alert("Wrong password");
-  }
-}
-
-// LOAD DATA
-async function load(){
+async function load() {
   const res = await fetch(API);
   const data = await res.json();
 
-  const grid = document.getElementById("grid");
-  grid.innerHTML = "";
+  const tbody = document.querySelector("tbody");
+  tbody.innerHTML = "";
 
-  data.reverse().forEach(v => {
-    const card = document.createElement("div");
-    card.className="card";
+  Object.values(data).reverse().forEach(v => {
 
-    const isLive = (Date.now() - new Date(v.updated)) < 15000;
+    const tr = document.createElement("tr");
 
-    card.innerHTML = `
-      <b>${formatTime(v.updated)}</b>
-      <span class="status ${isLive ? "live":"idle"}">
-        ${isLive ? "LIVE":"IDLE"}
-      </span>
+    const mapLink = v.lat && v.lng
+      ? `https://maps.google.com/?q=${v.lat},${v.lng}`
+      : "#";
 
-      <div>🌐 ${v.ip || "-"}</div>
-      <div>📱 ${shortDevice(v.device)}</div>
-      <div>💻 ${v.os || "-"}</div>
-      <div>🌍 ${getBrowser(v.device)}</div>
-      <div>📡 ${v.network || "-"}</div>
-
-      <a href="https://maps.google.com/?q=${v.lat},${v.lng}" target="_blank">
-        📍 Open Map
-      </a>
-
-      ${v.image ? `<img src="${v.image}">` : ""}
-
-      <div id="map_${v.session_id}" class="map"></div>
+    tr.innerHTML = `
+      <td>${formatTime(v.updated)}</td>
+      <td>${v.ip || "-"}</td>
+      <td>${shortDevice(v.device)}</td>
+      <td>${getBrowser(v.device)}</td>
+      <td>${v.network || "-"}</td>
+      <td><span class="badge ${v.lat ? "live" : "idle"}">${v.lat ? "LIVE" : "IDLE"}</span></td>
+      <td><a href="${mapLink}" target="_blank">📍</a></td>
     `;
 
-    grid.appendChild(card);
+    tr.onclick = () => openModal(v);
 
-    if(v.lat && v.lng){
-      setTimeout(()=>initMap(v),100);
-    }
+    tbody.appendChild(tr);
   });
 }
 
-// MAP INIT
-function initMap(v){
-  const id = "map_"+v.session_id;
+function openModal(v) {
+  const modal = document.getElementById("modal");
+  const content = document.getElementById("modalContent");
 
-  if(maps[id]) return;
+  content.innerHTML = `
+    <h3>Visitor Details</h3>
 
-  const map = L.map(id).setView([v.lat, v.lng], 13);
+    <p><b>IP:</b> ${v.ip}</p>
+    <p><b>Device:</b> ${shortDevice(v.device)}</p>
+    <p><b>OS:</b> ${v.os}</p>
+    <p><b>Browser:</b> ${getBrowser(v.device)}</p>
+    <p><b>Network:</b> ${v.network}</p>
 
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+    <p><b>Location:</b><br>
+    Lat: ${v.lat || "-"}<br>
+    Lng: ${v.lng || "-"}</p>
 
-  L.marker([v.lat, v.lng]).addTo(map);
+    ${v.image ? `<img src="${v.image}">` : ""}
 
-  maps[id]=map;
+    <br>
+    <button onclick="closeModal()">Close</button>
+  `;
+
+  modal.style.display = "flex";
 }
 
-// HELPERS
-function formatTime(t){
+function closeModal() {
+  document.getElementById("modal").style.display = "none";
+}
+
+function formatTime(t) {
   return new Date(t).toLocaleString();
 }
 
-function shortDevice(ua=""){
-  if(ua.includes("Android")) return "Android";
-  if(ua.includes("iPhone")) return "iPhone";
-  if(ua.includes("Windows")) return "Windows";
+function shortDevice(ua = "") {
+  if (ua.includes("Android")) return "Android";
+  if (ua.includes("iPhone")) return "iPhone";
+  if (ua.includes("Windows")) return "Windows";
   return "Unknown";
 }
 
-function getBrowser(ua=""){
-  if(ua.includes("Chrome")) return "Chrome";
-  if(ua.includes("Safari")) return "Safari";
-  if(ua.includes("Firefox")) return "Firefox";
+function getBrowser(ua = "") {
+  if (ua.includes("Chrome")) return "Chrome";
+  if (ua.includes("Safari")) return "Safari";
+  if (ua.includes("Firefox")) return "Firefox";
   return "Unknown";
 }
+
+// 🔄 AUTO REFRESH (LIVE TRACKING)
+setInterval(load, 3000);
+
+load();
 </script>
 
 </body>
