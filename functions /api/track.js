@@ -331,7 +331,7 @@ async function processFinalEvent(
     lockKey,
     "1",
     {
-      expirationTtl: 30
+      expirationTtl: 60
     }
   );
 
