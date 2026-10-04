@@ -1,211 +1,2051 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
+
+<meta charset="UTF-8">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0"
+>
+
 <title>Visitor Dashboard</title>
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <style>
+
+* {
+  box-sizing: border-box;
+}
+
 body {
-  font-family: Arial;
+
   margin: 0;
-  background: #0f172a;
-  color: white;
+
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
+
+  background:
+    #0f172a;
+
+  color:
+    white;
+}
+
+
+/* ==========================================================
+   LOGIN
+   ========================================================== */
+
+#loginScreen {
+
+  min-height:
+    100vh;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  padding:
+    20px;
+}
+
+.loginBox {
+
+  width:
+    100%;
+
+  max-width:
+    400px;
+
+  padding:
+    30px;
+
+  border-radius:
+    18px;
+
+  background:
+    #1e293b;
+
+  box-shadow:
+    0 20px 60px
+    rgba(0,0,0,.35);
+
+  text-align:
+    center;
+}
+
+.loginBox h2 {
+
+  margin-top:
+    0;
+}
+
+.loginBox input {
+
+  width:
+    100%;
+
+  padding:
+    13px;
+
+  border:
+    1px solid
+    #475569;
+
+  border-radius:
+    10px;
+
+  background:
+    #0f172a;
+
+  color:
+    white;
+
+  margin:
+    15px 0;
+
+  outline:
+    none;
+}
+
+.loginBox button {
+
+  width:
+    100%;
+
+  padding:
+    13px;
+
+  border:
+    0;
+
+  border-radius:
+    10px;
+
+  background:
+    #2563eb;
+
+  color:
+    white;
+
+  font-weight:
+    bold;
+
+  cursor:
+    pointer;
+}
+
+.loginError {
+
+  margin-top:
+    12px;
+
+  color:
+    #f87171;
+
+  font-size:
+    13px;
+}
+
+
+/* ==========================================================
+   DASHBOARD
+   ========================================================== */
+
+#dashboard {
+
+  display:
+    none;
 }
 
 .header {
-  padding: 15px;
-  font-size: 20px;
-  font-weight: bold;
-  background: #1e293b;
+
+  padding:
+    15px 20px;
+
+  background:
+    #1e293b;
+
+  display:
+    flex;
+
+  justify-content:
+    space-between;
+
+  align-items:
+    center;
+
+  gap:
+    15px;
+
+  position:
+    sticky;
+
+  top:
+    0;
+
+  z-index:
+    20;
 }
+
+.headerTitle {
+
+  font-size:
+    20px;
+
+  font-weight:
+    bold;
+}
+
+.headerActions {
+
+  display:
+    flex;
+
+  gap:
+    8px;
+}
+
+.header button {
+
+  border:
+    0;
+
+  border-radius:
+    8px;
+
+  padding:
+    8px 12px;
+
+  cursor:
+    pointer;
+}
+
+.refreshBtn {
+
+  background:
+    #2563eb;
+
+  color:
+    white;
+}
+
+.logoutBtn {
+
+  background:
+    #dc2626;
+
+  color:
+    white;
+}
+
 
 .container {
-  padding: 15px;
+
+  padding:
+    20px;
+
+  max-width:
+    1600px;
+
+  margin:
+    auto;
 }
 
-/* TABLE */
+
+/* ==========================================================
+   STATS
+   ========================================================== */
+
+.stats {
+
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(
+      4,
+      1fr
+    );
+
+  gap:
+    12px;
+
+  margin-bottom:
+    20px;
+}
+
+.stat {
+
+  background:
+    #1e293b;
+
+  padding:
+    18px;
+
+  border-radius:
+    12px;
+}
+
+.statTitle {
+
+  color:
+    #94a3b8;
+
+  font-size:
+    13px;
+}
+
+.statValue {
+
+  font-size:
+    26px;
+
+  font-weight:
+    bold;
+
+  margin-top:
+    5px;
+}
+
+
+/* ==========================================================
+   TOOLBAR
+   ========================================================== */
+
+.toolbar {
+
+  display:
+    flex;
+
+  gap:
+    10px;
+
+  margin-bottom:
+    15px;
+}
+
+.search {
+
+  flex:
+    1;
+
+  padding:
+    11px;
+
+  border:
+    1px solid
+    #475569;
+
+  border-radius:
+    9px;
+
+  background:
+    #1e293b;
+
+  color:
+    white;
+}
+
+.toolbar button {
+
+  border:
+    0;
+
+  border-radius:
+    9px;
+
+  padding:
+    10px 14px;
+
+  background:
+    #334155;
+
+  color:
+    white;
+
+  cursor:
+    pointer;
+}
+
+
+/* ==========================================================
+   TABLE
+   ========================================================== */
+
+.tableWrap {
+
+  overflow:
+    auto;
+
+  border-radius:
+    12px;
+
+  background:
+    #1e293b;
+}
+
 table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #1e293b;
-  border-radius: 10px;
-  overflow: hidden;
+
+  width:
+    100%;
+
+  border-collapse:
+    collapse;
+
+  min-width:
+    950px;
 }
 
-th, td {
-  padding: 12px;
-  text-align: left;
+th,
+td {
+
+  padding:
+    12px;
+
+  text-align:
+    left;
+
+  border-bottom:
+    1px solid
+    #334155;
+
+  white-space:
+    nowrap;
 }
 
 th {
-  background: #334155;
+
+  background:
+    #334155;
+
+  position:
+    sticky;
+
+  top:
+    0;
+
+  z-index:
+    2;
 }
 
-tr {
-  border-bottom: 1px solid #334155;
-  cursor: pointer;
+tbody tr {
+
+  cursor:
+    pointer;
 }
 
-tr:hover {
-  background: #273549;
+tbody tr:hover {
+
+  background:
+    #273549;
 }
 
-/* STATUS */
+
+/* ==========================================================
+   STATUS
+   ========================================================== */
+
 .badge {
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 12px;
+
+  display:
+    inline-block;
+
+  padding:
+    4px 8px;
+
+  border-radius:
+    6px;
+
+  font-size:
+    11px;
+
+  font-weight:
+    bold;
 }
 
-.idle { background: gray; }
-.live { background: green; }
+.live {
 
-/* MODAL */
+  background:
+    #166534;
+
+  color:
+    #bbf7d0;
+}
+
+.idle {
+
+  background:
+    #475569;
+
+  color:
+    #cbd5e1;
+}
+
+
+/* ==========================================================
+   MODAL
+   ========================================================== */
+
 .modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.8);
-  display: none;
-  justify-content: center;
-  align-items: center;
+
+  position:
+    fixed;
+
+  inset:
+    0;
+
+  background:
+    rgba(
+      0,
+      0,
+      0,
+      .82
+    );
+
+  display:
+    none;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  padding:
+    20px;
+
+  z-index:
+    100;
 }
 
-.modal-content {
-  background: #1e293b;
-  padding: 20px;
-  border-radius: 10px;
-  width: 90%;
-  max-width: 600px;
+.modalContent {
+
+  width:
+    100%;
+
+  max-width:
+    650px;
+
+  max-height:
+    90vh;
+
+  overflow:
+    auto;
+
+  padding:
+    20px;
+
+  border-radius:
+    15px;
+
+  background:
+    #1e293b;
 }
 
-img {
-  width: 100%;
-  border-radius: 10px;
+.modalContent img {
+
+  max-width:
+    100%;
+
+  border-radius:
+    10px;
+
+  margin-top:
+    10px;
 }
 
-button {
-  margin-top: 10px;
-  padding: 8px 12px;
+.detailGrid {
+
+  display:
+    grid;
+
+  grid-template-columns:
+    150px 1fr;
+
+  gap:
+    8px;
+
+  margin:
+    15px 0;
 }
+
+.detailLabel {
+
+  color:
+    #94a3b8;
+}
+
+.closeBtn {
+
+  margin-top:
+    15px;
+
+  padding:
+    10px 15px;
+
+  border:
+    0;
+
+  border-radius:
+    8px;
+
+  background:
+    #475569;
+
+  color:
+    white;
+
+  cursor:
+    pointer;
+}
+
+
+/* ==========================================================
+   MOBILE
+   ========================================================== */
+
+@media (
+  max-width: 700px
+) {
+
+  .header {
+
+    align-items:
+      flex-start;
+
+    flex-direction:
+      column;
+  }
+
+  .headerActions {
+
+    width:
+      100%;
+  }
+
+  .header button {
+
+    flex:
+      1;
+  }
+
+  .container {
+
+    padding:
+      12px;
+  }
+
+  .stats {
+
+    grid-template-columns:
+      repeat(
+        2,
+        1fr
+      );
+  }
+
+  .toolbar {
+
+    flex-direction:
+      column;
+  }
+
+  .detailGrid {
+
+    grid-template-columns:
+      1fr;
+  }
+}
+
 </style>
+
 </head>
 
 <body>
 
-<div class="header">📊 Visitor Dashboard</div>
 
-<div class="container">
-  <table id="table">
-    <thead>
-      <tr>
-        <th>Time</th>
-        <th>IP</th>
-        <th>Device</th>
-        <th>Browser</th>
-        <th>Network</th>
-        <th>Status</th>
-        <th>Map</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+<!-- ========================================================
+     LOGIN
+     ======================================================== -->
+
+<div id="loginScreen">
+
+  <div class="loginBox">
+
+    <h2>
+      🔐 Visitor Dashboard
+    </h2>
+
+    <p>
+      Admin authentication required.
+    </p>
+
+    <input
+      id="password"
+      type="password"
+      placeholder="Admin password"
+      autocomplete="current-password"
+    >
+
+    <button
+      id="loginBtn"
+    >
+      Login
+    </button>
+
+    <div
+      id="loginError"
+      class="loginError"
+    ></div>
+
+  </div>
+
 </div>
 
-<!-- MODAL -->
-<div class="modal" id="modal">
-  <div class="modal-content" id="modalContent"></div>
+
+<!-- ========================================================
+     DASHBOARD
+     ======================================================== -->
+
+<div id="dashboard">
+
+  <div class="header">
+
+    <div class="headerTitle">
+      📊 Visitor Dashboard
+    </div>
+
+    <div class="headerActions">
+
+      <button
+        class="refreshBtn"
+        id="refreshBtn"
+      >
+        🔄 Refresh
+      </button>
+
+      <button
+        class="logoutBtn"
+        id="logoutBtn"
+      >
+        Logout
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <div class="container">
+
+    <div class="stats">
+
+      <div class="stat">
+
+        <div class="statTitle">
+          Total Visitors
+        </div>
+
+        <div
+          class="statValue"
+          id="totalCount"
+        >
+          0
+        </div>
+
+      </div>
+
+
+      <div class="stat">
+
+        <div class="statTitle">
+          With GPS
+        </div>
+
+        <div
+          class="statValue"
+          id="gpsCount"
+        >
+          0
+        </div>
+
+      </div>
+
+
+      <div class="stat">
+
+        <div class="statTitle">
+          Today
+        </div>
+
+        <div
+          class="statValue"
+          id="todayCount"
+        >
+          0
+        </div>
+
+      </div>
+
+
+      <div class="stat">
+
+        <div class="statTitle">
+          Last Update
+        </div>
+
+        <div
+          class="statValue"
+          id="lastUpdate"
+          style="font-size:16px"
+        >
+          -
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="toolbar">
+
+      <input
+        id="search"
+        class="search"
+        placeholder="Search IP, device, browser, network..."
+      >
+
+      <button
+        id="clearSearch"
+      >
+        Clear
+      </button>
+
+    </div>
+
+
+    <div class="tableWrap">
+
+      <table>
+
+        <thead>
+
+          <tr>
+
+            <th>
+              Time
+            </th>
+
+            <th>
+              IP
+            </th>
+
+            <th>
+              Device
+            </th>
+
+            <th>
+              Browser
+            </th>
+
+            <th>
+              Network
+            </th>
+
+            <th>
+              GPS
+            </th>
+
+            <th>
+              Map
+            </th>
+
+          </tr>
+
+        </thead>
+
+        <tbody
+          id="tableBody"
+        ></tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+
 </div>
+
+
+<!-- ========================================================
+     MODAL
+     ======================================================== -->
+
+<div
+  class="modal"
+  id="modal"
+>
+
+  <div
+    class="modalContent"
+    id="modalContent"
+  ></div>
+
+</div>
+
 
 <script>
-const API = "/api/events";
+
+// ============================================================
+// CONFIG
+// ============================================================
+
+const API_EVENTS =
+  "/api/events";
+
+const API_LOGIN =
+  "/api/login";
+
+let visitors =
+  [];
+
+
+// ============================================================
+// ELEMENTS
+// ============================================================
+
+const loginScreen =
+  document.getElementById(
+    "loginScreen"
+  );
+
+const dashboard =
+  document.getElementById(
+    "dashboard"
+  );
+
+const password =
+  document.getElementById(
+    "password"
+  );
+
+const loginBtn =
+  document.getElementById(
+    "loginBtn"
+  );
+
+const loginError =
+  document.getElementById(
+    "loginError"
+  );
+
+
+// ============================================================
+// LOGIN
+// ============================================================
+
+async function login() {
+
+  loginError.textContent =
+    "";
+
+  const value =
+    password.value;
+
+  if (!value) {
+
+    loginError.textContent =
+      "Enter admin password.";
+
+    return;
+  }
+
+  loginBtn.disabled =
+    true;
+
+  loginBtn.textContent =
+    "Checking...";
+
+  try {
+
+    const response =
+      await fetch(
+        API_LOGIN,
+        {
+          method:
+            "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body:
+            JSON.stringify({
+              password:
+                value
+            }),
+
+          cache:
+            "no-store"
+        }
+      );
+
+    const result =
+      await response.json();
+
+    if (!response.ok || !result.ok) {
+
+      throw new Error(
+        result.error ||
+        "Invalid password"
+      );
+    }
+
+    password.value =
+      "";
+
+    showDashboard();
+
+  } catch (error) {
+
+    loginError.textContent =
+      error.message ||
+      "Login failed.";
+
+  } finally {
+
+    loginBtn.disabled =
+      false;
+
+    loginBtn.textContent =
+      "Login";
+  }
+}
+
+
+loginBtn.addEventListener(
+  "click",
+  login
+);
+
+password.addEventListener(
+  "keydown",
+  event => {
+
+    if (
+      event.key === "Enter"
+    ) {
+
+      login();
+    }
+  }
+);
+
+
+// ============================================================
+// CHECK EXISTING SESSION
+// ============================================================
+
+async function checkLogin() {
+
+  try {
+
+    const response =
+      await fetch(
+        API_LOGIN,
+        {
+          cache:
+            "no-store"
+        }
+      );
+
+    if (
+      response.ok
+    ) {
+
+      showDashboard();
+
+    } else {
+
+      showLogin();
+    }
+
+  } catch {
+
+    showLogin();
+  }
+}
+
+
+// ============================================================
+// SHOW LOGIN
+// ============================================================
+
+function showLogin() {
+
+  loginScreen.style.display =
+    "flex";
+
+  dashboard.style.display =
+    "none";
+}
+
+
+// ============================================================
+// SHOW DASHBOARD
+// ============================================================
+
+function showDashboard() {
+
+  loginScreen.style.display =
+    "none";
+
+  dashboard.style.display =
+    "block";
+
+  load();
+}
+
+
+// ============================================================
+// LOAD DATA
+// ============================================================
 
 async function load() {
-  const res = await fetch(API);
-  const data = await res.json();
 
-  const tbody = document.querySelector("tbody");
-  tbody.innerHTML = "";
+  try {
 
-  Object.values(data).reverse().forEach(v => {
+    const response =
+      await fetch(
+        API_EVENTS,
+        {
+          cache:
+            "no-store"
+        }
+      );
 
-    const tr = document.createElement("tr");
+    if (
+      response.status === 401
+    ) {
 
-    const mapLink = v.lat && v.lng
-      ? `https://maps.google.com/?q=${v.lat},${v.lng}`
-      : "#";
+      showLogin();
 
-    tr.innerHTML = `
-      <td>${formatTime(v.updated)}</td>
-      <td>${v.ip || "-"}</td>
-      <td>${shortDevice(v.device)}</td>
-      <td>${getBrowser(v.device)}</td>
-      <td>${v.network || "-"}</td>
-      <td><span class="badge ${v.lat ? "live" : "idle"}">${v.lat ? "LIVE" : "IDLE"}</span></td>
-      <td><a href="${mapLink}" target="_blank">📍</a></td>
-    `;
+      return;
+    }
 
-    tr.onclick = () => openModal(v);
+    const result =
+      await response.json();
 
-    tbody.appendChild(tr);
-  });
+    if (
+      !response.ok ||
+      !result.ok
+    ) {
+
+      throw new Error(
+        result.error ||
+        "Unable to load data"
+      );
+    }
+
+    visitors =
+      Array.isArray(
+        result.data
+      )
+        ? result.data
+        : [];
+
+    render();
+
+  } catch (error) {
+
+    console.log(
+      "Load error:",
+      error
+    );
+  }
 }
 
-function openModal(v) {
-  const modal = document.getElementById("modal");
-  const content = document.getElementById("modalContent");
 
-  content.innerHTML = `
-    <h3>Visitor Details</h3>
+// ============================================================
+// RENDER
+// ============================================================
 
-    <p><b>IP:</b> ${v.ip}</p>
-    <p><b>Device:</b> ${shortDevice(v.device)}</p>
-    <p><b>OS:</b> ${v.os}</p>
-    <p><b>Browser:</b> ${getBrowser(v.device)}</p>
-    <p><b>Network:</b> ${v.network}</p>
+function render() {
 
-    <p><b>Location:</b><br>
-    Lat: ${v.lat || "-"}<br>
-    Lng: ${v.lng || "-"}</p>
+  const search =
+    document
+      .getElementById(
+        "search"
+      )
+      .value
+      .trim()
+      .toLowerCase();
 
-    ${v.image ? `<img src="${v.image}">` : ""}
+  const filtered =
+    visitors.filter(
+      visitor => {
 
-    <br>
-    <button onclick="closeModal()">Close</button>
-  `;
+        if (!search) {
+          return true;
+        }
 
-  modal.style.display = "flex";
+        const text = [
+          visitor.ip,
+          visitor.device,
+          visitor.os,
+          visitor.browser,
+          visitor.network,
+          visitor.user_id,
+          visitor.session_id
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        return text.includes(
+          search
+        );
+      }
+    );
+
+  renderStats();
+
+  const tbody =
+    document.getElementById(
+      "tableBody"
+    );
+
+  tbody.replaceChildren();
+
+  for (
+    const visitor
+    of filtered
+  ) {
+
+    const row =
+      document.createElement(
+        "tr"
+      );
+
+    row.addEventListener(
+      "click",
+      () =>
+        openModal(visitor)
+    );
+
+    // Time
+    const time =
+      document.createElement(
+        "td"
+      );
+
+    time.textContent =
+      formatTime(
+        visitor.updated ||
+        visitor.time
+      );
+
+    row.appendChild(
+      time
+    );
+
+    // IP
+    const ip =
+      document.createElement(
+        "td"
+      );
+
+    ip.textContent =
+      visitor.ip ||
+      "-";
+
+    row.appendChild(
+      ip
+    );
+
+    // Device
+    const device =
+      document.createElement(
+        "td"
+      );
+
+    device.textContent =
+      shortDevice(
+        visitor.device
+      );
+
+    row.appendChild(
+      device
+    );
+
+    // Browser
+    const browser =
+      document.createElement(
+        "td"
+      );
+
+    browser.textContent =
+      getBrowser(
+        visitor.device
+      );
+
+    row.appendChild(
+      browser
+    );
+
+    // Network
+    const network =
+      document.createElement(
+        "td"
+      );
+
+    network.textContent =
+      visitor.network ||
+      "-";
+
+    row.appendChild(
+      network
+    );
+
+    // GPS
+    const gps =
+      document.createElement(
+        "td"
+      );
+
+    const badge =
+      document.createElement(
+        "span"
+      );
+
+    badge.className =
+      "badge " +
+      (
+        hasGPS(visitor)
+          ? "live"
+          : "idle"
+      );
+
+    badge.textContent =
+      hasGPS(visitor)
+        ? "GPS"
+        : "NO GPS";
+
+    gps.appendChild(
+      badge
+    );
+
+    row.appendChild(
+      gps
+    );
+
+    // Map
+    const mapCell =
+      document.createElement(
+        "td"
+      );
+
+    if (
+      hasGPS(visitor)
+    ) {
+
+      const link =
+        document.createElement(
+          "a"
+        );
+
+      link.href =
+        `https://maps.google.com/?q=${encodeURIComponent(
+          visitor.lat
+        )},${encodeURIComponent(
+          visitor.lng
+        )}`;
+
+      link.target =
+        "_blank";
+
+      link.rel =
+        "noopener noreferrer";
+
+      link.textContent =
+        "📍";
+
+      // Prevent row modal
+      link.addEventListener(
+        "click",
+        event =>
+          event.stopPropagation()
+      );
+
+      mapCell.appendChild(
+        link
+      );
+
+    } else {
+
+      mapCell.textContent =
+        "-";
+    }
+
+    row.appendChild(
+      mapCell
+    );
+
+    tbody.appendChild(
+      row
+    );
+  }
 }
+
+
+// ============================================================
+// STATS
+// ============================================================
+
+function renderStats() {
+
+  document.getElementById(
+    "totalCount"
+  ).textContent =
+    visitors.length;
+
+  document.getElementById(
+    "gpsCount"
+  ).textContent =
+    visitors.filter(
+      hasGPS
+    ).length;
+
+  const today =
+    new Date();
+
+  const todayString =
+    today.toLocaleDateString(
+      "en-IN",
+      {
+        timeZone:
+          "Asia/Kolkata"
+      }
+    );
+
+  const todayCount =
+    visitors.filter(
+      visitor => {
+
+        if (
+          !visitor.updated
+        ) {
+          return false;
+        }
+
+        const date =
+          new Date(
+            visitor.updated
+          );
+
+        return (
+          date.toLocaleDateString(
+            "en-IN",
+            {
+              timeZone:
+                "Asia/Kolkata"
+            }
+          ) ===
+          todayString
+        );
+      }
+    ).length;
+
+  document.getElementById(
+    "todayCount"
+  ).textContent =
+    todayCount;
+
+  if (
+    visitors.length
+  ) {
+
+    document.getElementById(
+      "lastUpdate"
+    ).textContent =
+      formatTime(
+        visitors[0].updated
+      );
+  }
+}
+
+
+// ============================================================
+// MODAL
+// ============================================================
+
+function openModal(
+  visitor
+) {
+
+  const modal =
+    document.getElementById(
+      "modal"
+    );
+
+  const content =
+    document.getElementById(
+      "modalContent"
+    );
+
+  content.replaceChildren();
+
+  const title =
+    document.createElement(
+      "h2"
+    );
+
+  title.textContent =
+    "Visitor Details";
+
+  content.appendChild(
+    title
+  );
+
+  const grid =
+    document.createElement(
+      "div"
+    );
+
+  grid.className =
+    "detailGrid";
+
+  addDetail(
+    grid,
+    "Time",
+    formatTime(
+      visitor.updated
+    )
+  );
+
+  addDetail(
+    grid,
+    "IP",
+    visitor.ip ||
+      "-"
+  );
+
+  addDetail(
+    grid,
+    "Device",
+    shortDevice(
+      visitor.device
+    )
+  );
+
+  addDetail(
+    grid,
+    "OS",
+    visitor.os ||
+      "-"
+  );
+
+  addDetail(
+    grid,
+    "Browser",
+    getBrowser(
+      visitor.device
+    )
+  );
+
+  addDetail(
+    grid,
+    "Network",
+    visitor.network ||
+      "-"
+  );
+
+  addDetail(
+    grid,
+    "Downlink",
+    visitor.downlink ||
+      "-"
+  );
+
+  addDetail(
+    grid,
+    "Latitude",
+    visitor.lat ??
+      "-"
+  );
+
+  addDetail(
+    grid,
+    "Longitude",
+    visitor.lng ??
+      "-"
+  );
+
+  addDetail(
+    grid,
+    "Camera",
+    visitor.camera ||
+      "-"
+  );
+
+  addDetail(
+    grid,
+    "Storage",
+    visitor.image_storage ||
+      "-"
+  );
+
+  content.appendChild(
+    grid
+  );
+
+
+  // ========================================================
+  // IMAGE
+  // ========================================================
+
+  if (
+    visitor.image
+  ) {
+
+    const img =
+      document.createElement(
+        "img"
+      );
+
+    img.src =
+      visitor.image;
+
+    img.alt =
+      "Visitor image";
+
+    img.loading =
+      "lazy";
+
+    content.appendChild(
+      img
+    );
+
+  } else if (
+    visitor.image_key
+  ) {
+
+    const img =
+      document.createElement(
+        "img"
+      );
+
+    img.src =
+      `/api/image?key=${encodeURIComponent(
+        visitor.image_key
+      )}`;
+
+    img.alt =
+      "Visitor image";
+
+    img.loading =
+      "lazy";
+
+    content.appendChild(
+      img
+    );
+  }
+
+
+  // ========================================================
+  // MAP
+  // ========================================================
+
+  if (
+    hasGPS(visitor)
+  ) {
+
+    const map =
+      document.createElement(
+        "a"
+      );
+
+    map.href =
+      `https://maps.google.com/?q=${encodeURIComponent(
+        visitor.lat
+      )},${encodeURIComponent(
+        visitor.lng
+      )}`;
+
+    map.target =
+      "_blank";
+
+    map.rel =
+      "noopener noreferrer";
+
+    map.textContent =
+      "📍 Open Google Maps";
+
+    map.style.display =
+      "inline-block";
+
+    map.style.marginTop =
+      "12px";
+
+    content.appendChild(
+      map
+    );
+  }
+
+
+  // ========================================================
+  // CLOSE
+  // ========================================================
+
+  const close =
+    document.createElement(
+      "button"
+    );
+
+  close.className =
+    "closeBtn";
+
+  close.textContent =
+    "Close";
+
+  close.addEventListener(
+    "click",
+    closeModal
+  );
+
+  content.appendChild(
+    close
+  );
+
+  modal.style.display =
+    "flex";
+}
+
+
+function addDetail(
+  parent,
+  label,
+  value
+) {
+
+  const labelEl =
+    document.createElement(
+      "div"
+    );
+
+  labelEl.className =
+    "detailLabel";
+
+  labelEl.textContent =
+    label;
+
+  const valueEl =
+    document.createElement(
+      "div"
+    );
+
+  valueEl.textContent =
+    String(
+      value
+    );
+
+  parent.appendChild(
+    labelEl
+  );
+
+  parent.appendChild(
+    valueEl
+  );
+}
+
 
 function closeModal() {
-  document.getElementById("modal").style.display = "none";
+
+  document.getElementById(
+    "modal"
+  ).style.display =
+    "none";
 }
 
-function formatTime(t) {
-  return new Date(t).toLocaleString();
+
+// Close when clicking outside
+
+document
+  .getElementById("modal")
+  .addEventListener(
+    "click",
+    event => {
+
+      if (
+        event.target.id ===
+        "modal"
+      ) {
+
+        closeModal();
+      }
+    }
+  );
+
+
+// ============================================================
+// HELPERS
+// ============================================================
+
+function hasGPS(
+  visitor
+) {
+
+  return (
+    Number.isFinite(
+      Number(
+        visitor.lat
+      )
+    ) &&
+    Number.isFinite(
+      Number(
+        visitor.lng
+      )
+    )
+  );
 }
 
-function shortDevice(ua = "") {
-  if (ua.includes("Android")) return "Android";
-  if (ua.includes("iPhone")) return "iPhone";
-  if (ua.includes("Windows")) return "Windows";
+
+function formatTime(
+  value
+) {
+
+  if (!value) {
+    return "-";
+  }
+
+  try {
+
+    return new Date(
+      value
+    ).toLocaleString(
+      "en-IN",
+      {
+        timeZone:
+          "Asia/Kolkata"
+      }
+    );
+
+  } catch {
+
+    return "-";
+  }
+}
+
+
+function shortDevice(
+  ua = ""
+) {
+
+  ua =
+    String(ua);
+
+  if (
+    /iPhone/i.test(ua)
+  ) {
+    return "iPhone";
+  }
+
+  if (
+    /iPad/i.test(ua)
+  ) {
+    return "iPad";
+  }
+
+  if (
+    /Android/i.test(ua)
+  ) {
+    return "Android Mobile";
+  }
+
+  if (
+    /Windows/i.test(ua)
+  ) {
+    return "Windows PC";
+  }
+
+  if (
+    /Macintosh/i.test(ua)
+  ) {
+    return "Mac";
+  }
+
+  if (
+    /Linux/i.test(ua)
+  ) {
+    return "Linux";
+  }
+
   return "Unknown";
 }
 
-function getBrowser(ua = "") {
-  if (ua.includes("Chrome")) return "Chrome";
-  if (ua.includes("Safari")) return "Safari";
-  if (ua.includes("Firefox")) return "Firefox";
+
+function getBrowser(
+  ua = ""
+) {
+
+  ua =
+    String(ua);
+
+  if (
+    /Edg\//i.test(ua)
+  ) {
+    return "Microsoft Edge";
+  }
+
+  if (
+    /OPR\//i.test(ua)
+  ) {
+    return "Opera";
+  }
+
+  if (
+    /CriOS\//i.test(ua)
+  ) {
+    return "Chrome iOS";
+  }
+
+  if (
+    /FxiOS\//i.test(ua)
+  ) {
+    return "Firefox iOS";
+  }
+
+  if (
+    /Chrome\//i.test(ua)
+  ) {
+    return "Chrome";
+  }
+
+  if (
+    /Firefox\//i.test(ua)
+  ) {
+    return "Firefox";
+  }
+
+  if (
+    /Safari\//i.test(ua)
+  ) {
+    return "Safari";
+  }
+
   return "Unknown";
 }
 
-// 🔄 AUTO REFRESH (LIVE TRACKING)
-setInterval(load, 3000);
 
-load();
+// ============================================================
+// SEARCH
+// ============================================================
+
+document
+  .getElementById(
+    "search"
+  )
+  .addEventListener(
+    "input",
+    render
+  );
+
+
+document
+  .getElementById(
+    "clearSearch"
+  )
+  .addEventListener(
+    "click",
+    () => {
+
+      document.getElementById(
+        "search"
+      ).value = "";
+
+      render();
+    }
+  );
+
+
+// ============================================================
+// REFRESH
+// ============================================================
+
+document
+  .getElementById(
+    "refreshBtn"
+  )
+  .addEventListener(
+    "click",
+    load
+  );
+
+
+// ============================================================
+// LOGOUT
+// ============================================================
+
+document
+  .getElementById(
+    "logoutBtn"
+  )
+  .addEventListener(
+    "click",
+    async () => {
+
+      await fetch(
+        API_LOGIN,
+        {
+          method:
+            "DELETE",
+
+          cache:
+            "no-store"
+        }
+      );
+
+      showLogin();
+    }
+  );
+
+
+// ============================================================
+// AUTO REFRESH
+// ============================================================
+
+setInterval(
+  () => {
+
+    if (
+      dashboard.style.display !==
+      "none"
+    ) {
+
+      load();
+    }
+
+  },
+  10000
+);
+
+
+// ============================================================
+// START
+// ============================================================
+
+checkLogin();
+
 </script>
 
 </body>
