@@ -2,6 +2,23 @@
 // VISITOR TRACK API
 // ============================================================
 
+export async function onRequestGet() {
+  return new Response(
+    JSON.stringify({
+      ok: true,
+      route: "track.js",
+      message: "Cloudflare track function is deployed"
+    }),
+    {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      }
+    }
+  );
+}
+
 const MAX_BODY_SIZE = 1100000;
 const MAX_IMAGE_LENGTH = 900000;
 
